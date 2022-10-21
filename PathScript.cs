@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+//using System.Linq;//for array append
 public class PathScript : MonoBehaviour{
     public Terrain t;
     void Start(){
@@ -38,23 +39,22 @@ public class PathScript : MonoBehaviour{
     }
 
     public class Node{
-        public Node [] nodelist;
-        public int[] costlist;
+        public List<Node> nodelist;
+        public List<float> costlist;
         public float x;
         public float y;
         public float f_cost;
         public Node parent;
         public Node(){
-            this.nodelist = [];
-            this.costlist=[];
+            this.nodelist = new List<Node>();
+            this.costlist=new List<float>();
             this.x=0.0f;
             this.y=0.0f;
             this.f_cost=-1.0f;
             this.parent=null;
         }
-        public AddNode(Node n, float cost){
-            if (n==null):
-                return;
+        public void AddNode(Node n, float cost){
+            if (n==null) return;
             this.nodelist.Add(n);
             this.costlist.Add(cost);
         }
