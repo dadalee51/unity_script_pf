@@ -44,6 +44,7 @@ public class PathScript : MonoBehaviour{
         public float x;
         public float y;
         public float f_cost;
+        public float g_cost;
         public Node parent;
         public Node(){
             this.nodelist = new List<Node>();
@@ -58,5 +59,10 @@ public class PathScript : MonoBehaviour{
             this.nodelist.Add(n);
             this.costlist.Add(cost);
         }
+        public float GetFCost(Node target){
+            this.f_cost=Math.Sqrt(Math.Pow(this.x-target.x),2) , Math.Pow(this.y-target.y),2)) + this.g_cost;
+        }
     }
+
+    
 }
