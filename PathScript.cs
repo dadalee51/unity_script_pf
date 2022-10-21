@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 //using System.Linq;//for array append
 public class PathScript : MonoBehaviour{
     public Terrain t;
@@ -60,9 +61,14 @@ public class PathScript : MonoBehaviour{
             this.costlist.Add(cost);
         }
         public float GetFCost(Node target){
-            this.f_cost=Math.Sqrt(Math.Pow(this.x-target.x),2) , Math.Pow(this.y-target.y),2)) + this.g_cost;
+            this.f_cost=(float)Math.Sqrt(Math.Pow(this.x-target.x ,2) + Math.Pow(this.y-target.y ,2)) + this.g_cost;
+            return this.f_cost;
         }
     }
+    //add a Astar class which keeps a internal grid for solving the path.
+    public class AStar{
 
-    
+    }
+
+
 }
