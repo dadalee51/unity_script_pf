@@ -82,6 +82,7 @@ public class PathScript : MonoBehaviour{
     public class Node{
         public List<Node> nodelist;
         public List<float> costlist;
+        public List<bool> diaglist;
         public float x;
         public float z;
         public float f_cost;
@@ -92,15 +93,17 @@ public class PathScript : MonoBehaviour{
         public Node(){
             this.nodelist = new List<Node>();
             this.costlist=new List<float>();
+            this.diaglist=new List<bool>();//add information about whether it is a diagonal node to the orgiinal node.
             this.x=0.0f;
             this.z=0.0f;
             this.f_cost=-1.0f;
             this.parent=null;
         }
-        public void AddNode(Node n, float cost){
+        public void AddNode(Node n, float cost, bool isDiag){
             if (n==null) return;
             this.nodelist.Add(n);
             this.costlist.Add(cost);
+            this.diaglist.Add(isDiag);
         }
         public float GetFCost(Node target){
             this.f_cost=(float)Math.Sqrt(Math.Pow(this.x-target.x ,2) + Math.Pow(this.z-target.z ,2)) + this.g_cost;
@@ -145,20 +148,20 @@ public class PathScript : MonoBehaviour{
             for (int i=0;i<input_grid.Count;i++){
                 for(int j=0;j<input_grid[i].Count;j++){
 					if(grid[i][j].type==0)continue;
-					if(i-1>=0)grid[i][j].AddNode(grid[i-1][j],10);
-					if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j],10);
+					if(i-1>=0)grid[i][j].AddNode(grid[i-1][j],10,false);
+					if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j],10,false);
 					if(j-1>=0){
-						grid[i][j].AddNode(grid[i][j-1],10);
+						grid[i][j].AddNode(grid[i][j-1],10,false);
 						if (this.allow_diagonals){
-							if(i-1>=0)grid[i][j].AddNode(grid[i-1][j-1],14);
-							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j-1],14);
+							if(i-1>=0)grid[i][j].AddNode(grid[i-1][j-1],14,true);
+							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j-1],14,true);
 						}
 					}
 					if(j+1<grid[i].Count){
-						grid[i][j].AddNode(grid[i][j+1],10);
+						grid[i][j].AddNode(grid[i][j+1],10,false);
 						if (this.allow_diagonals){
-							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j+1],14);
-							if(i-1>grid.Count)grid[i][j].AddNode(grid[i-1][j+1],14);
+							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j+1],14,true);
+							if(i-1>grid.Count)grid[i][j].AddNode(grid[i-1][j+1],14,true);
 						}
 					}
                 }
@@ -204,14 +207,18 @@ public class PathScript : MonoBehaviour{
                     targetNotFound=false;
                     this.goal.parent=cheapest_unvisited.parent;
                 }
+                int index=0;
                 foreach(Node n in cheapest_unvisited.nodelist){
+                    
                     if (visited.Contains(n))continue;
                     if (!unvisited.Contains(n)){
-                        n.g_cost=cheapest_unvisited.g_cost+10;
+                        if (cheapest_unvisited.diaglist[index])n.g_cost=cheapest_unvisited.g_cost+14;
+                        else n.g_cost=cheapest_unvisited.g_cost+10;
                         n.GetFCost(goal);
                         unvisited.Add(n);
                     }
                     n.parent=cheapest_unvisited;
+                    index++;
                 }
             }
             //resolved path:
