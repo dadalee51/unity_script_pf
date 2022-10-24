@@ -5,10 +5,11 @@ using System;
 //using System.Linq;//for array append
 public class PathScript : MonoBehaviour{
     public Terrain t;
+    public GameObject target;
+    bool doSolve;
+    List<List<float>>ans = new List<List<float>>();
     void Start(){
-        AStar astar=new AStar(10,10,0,0,9,9);
-		astar.check();
-        astar.solve();
+        doSolve=true;
     }
     void DrawMark(Vector3 pos, Color c){
         //pos is our poin of interest on the grid.
@@ -23,22 +24,52 @@ public class PathScript : MonoBehaviour{
         Debug.DrawLine(pos+new Vector3(-0.2f,0,0), pos+new Vector3(0,0,-0.2f), c);
         Debug.DrawLine(pos+new Vector3(+0.2f,0,0), pos+new Vector3(0,0,-0.2f), c);
     }
+    void DrawGuide(Vector3 pos, Color c){
+        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
+        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
+        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
+        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
+    }
     void Update(){
-        
         Vector3 azPos = gameObject.transform.position;
+        List<List<int>> ig= new List<List<int>>();
+        
         //draw a grid around our agentzero
         for (float i=0.0f;i<100.0f;i+=1.0f){
+            List<int>li = new List<int>();
             for (float j=0.0f;j<100.0f;j+=1.0f){
+                int type=-1;
                 float height=t.terrainData.GetHeight((int)(i*5.13f),(int)(j*5.13f));
                 if (height > 0.0f){
-                    DrawMark(new Vector3(i,0,j), Color.black);
+                    //DrawMark(new Vector3(i,0,j), Color.black);
+                    type=0;
                 }else{
-                    DrawDiamond(new Vector3(i,0,j), Color.red);
+                    //DrawDiamond(new Vector3(i,0,j), Color.red);
+                    type=1;
                 }
-
+                if (transform.position.z > i && transform.position.z < i+10 && 
+                    transform.position.x > j && transform.position.x < j+10){
+                    type=3;
+                }
+                if (target.transform.position.z > i && target.transform.position.z < i+10 && 
+                    target.transform.position.x > j && target.transform.position.x < j+10){
+                    type=2;
+                }
+                li.Add(type);
+            }
+            ig.Add(li);
+        }
+        if(doSolve){
+            AStar astar=new AStar(ig);
+            astar.check();
+            ans = astar.solve();
+            doSolve=false;
+        }
+        if (ans!=null){
+            foreach(List<float> a in ans){
+                DrawGuide(new Vector3(a[0],5.0f,a[1]),Color.black);
             }
         }
-        
     }
     /*
         our coordinates: 
@@ -82,32 +113,36 @@ public class PathScript : MonoBehaviour{
         public Node start;
         public Node goal;
         public List<List<Node>> grid;
-        public AStar(int width, int depth, int start_x, int start_z, int goal_x, int goal_z){
+        //here we are changing the constructor of the astar from just a bunch of x and z values 
+        // to a 2d array.
+        public AStar(List<List<int>> input_grid){
             grid = new List<List<Node>>();
             //create the grid from the width and height, mark the start and goal position, then solve.
-            for (int i=0;i<depth;i++){
+            for (int i=0;i<input_grid.Count;i++){
                 List<Node> ln = new List<Node>();
-                for(int j=0;j<width;j++){
+                for(int j=0;j<input_grid[i].Count;j++){
                     Node n = new Node();
                     n.x=(float)j;
                     n.z=(float)i;
-                    n.name="["+i+"]["+j+"]";
+                    n.name="["+i+"]["+j+"]"; //name was required to show the path in debug.
                     ln.Add(n);
-                    if (start_x==j && start_z== i){
+                    if (input_grid[i][j]==3){
                         this.start=n;
                         n.type=3;
-                    }else if(goal_x==j && goal_z==i){
+                    }else if(input_grid[i][j]==2){
                         this.goal=n;
                         n.type=2;
-                    }else{
-                        n.type=1;//by default is a path.
+                    }else if(input_grid[i][j]==1){
+                        n.type=1;//a pathway.
+                    }else if(input_grid[i][j]==0){
+                        n.type=0;//a wall.
                     }
                 }
                 grid.Add(ln);
             }
             //compose nodelist for every node.
-            for (int i=0;i<depth;i++){
-                for(int j=0;j<width;j++){
+            for (int i=0;i<input_grid.Count;i++){
+                for(int j=0;j<input_grid[i].Count;j++){
 					if(grid[i][j].type==0)continue;
 					if(i-1>=0)grid[i][j].AddNode(grid[i-1][j],10);
 					if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j],10);
@@ -139,7 +174,7 @@ public class PathScript : MonoBehaviour{
             Debug.Log(debug);
 		}
 
-        public void solve(){
+        public List<List<float>> solve(){
             List<Node> unvisited=new List<Node>();
             List<Node> visited = new List<Node>();
             bool targetNotFound=true;
@@ -191,12 +226,16 @@ public class PathScript : MonoBehaviour{
             Debug.Log(debug_path);
             resolved.Reverse();
             debug_path="";
+            List<List<float>>lout=new List<List<float>>();
             foreach(Node r in resolved){
                 debug_path+=r.name+"->";
+                List<float>lo=new List<float>();
+                lo.Add(r.z);
+                lo.Add(r.x);
+                lout.Add(lo);
             }
             Debug.Log(debug_path);
+            return lout;
         }
     }
-
-
 }
