@@ -172,7 +172,7 @@ public class PathScript : MonoBehaviour{
 				}
                 debug=debug+"\n";
 			}
-            Debug.Log(debug);
+            //Debug.Log(debug);
 		}
 
         public List<List<float>> solve(){
@@ -235,7 +235,7 @@ public class PathScript : MonoBehaviour{
                 lo.Add(r.z);
                 lout.Add(lo);
             }
-            Debug.Log(debug_path);
+            //Debug.Log(debug_path);
             return lout;
         }
     }
