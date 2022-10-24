@@ -35,24 +35,24 @@ public class PathScript : MonoBehaviour{
         List<List<int>> ig= new List<List<int>>();
         
         //draw a grid around our agentzero
-        for (float i=0.0f;i<100.0f;i+=1.0f){
+        for (float i=0.0f;i<100.0f;i+=1.0f){    
             List<int>li = new List<int>();
             for (float j=0.0f;j<100.0f;j+=1.0f){
                 int type=-1;
-                float height=t.terrainData.GetHeight((int)(i*5.13f),(int)(j*5.13f));
+                float height=t.terrainData.GetHeight((int)(j*5.13f),(int)(i*5.13f));
                 if (height > 0.0f){
-                    //DrawMark(new Vector3(i,0,j), Color.black);
+                    DrawMark(new Vector3(j,0,i), Color.red);
                     type=0;
                 }else{
-                    //DrawDiamond(new Vector3(i,0,j), Color.red);
+                    //DrawDiamond(new Vector3(i,0,j), Color.green);
                     type=1;
                 }
-                if (transform.position.z > i && transform.position.z < i+10 && 
-                    transform.position.x > j && transform.position.x < j+10){
+                if (transform.position.z > i && transform.position.z < i+5 && 
+                    transform.position.x > j && transform.position.x < j+5){ //make sure we can find the object in our grid.
                     type=3;
                 }
-                if (target.transform.position.z > i && target.transform.position.z < i+10 && 
-                    target.transform.position.x > j && target.transform.position.x < j+10){
+                if (target.transform.position.z > i && target.transform.position.z < i+5 && 
+                    target.transform.position.x > j && target.transform.position.x < j+5){
                     type=2;
                 }
                 li.Add(type);
@@ -67,15 +67,16 @@ public class PathScript : MonoBehaviour{
         }
         if (ans!=null){
             foreach(List<float> a in ans){
-                DrawGuide(new Vector3(a[0],5.0f,a[1]),Color.black);
+                DrawGuide(new Vector3(a[0],0.0f,a[1]),Color.black);
             }
         }
     }
     /*
         our coordinates: 
-        x: red axis: width
-        z: blue axis: depth
-        y: green axis: height
+        x: red axis: width => j
+        z: blue axis: depth => i
+        y: green axis: height 
+        grid dimension [i][j] is equivalent to grid[z][x]
     */
 
     public class Node{
@@ -122,8 +123,8 @@ public class PathScript : MonoBehaviour{
                 List<Node> ln = new List<Node>();
                 for(int j=0;j<input_grid[i].Count;j++){
                     Node n = new Node();
-                    n.x=(float)j;
                     n.z=(float)i;
+                    n.x=(float)j;
                     n.name="["+i+"]["+j+"]"; //name was required to show the path in debug.
                     ln.Add(n);
                     if (input_grid[i][j]==3){
@@ -206,7 +207,7 @@ public class PathScript : MonoBehaviour{
                 foreach(Node n in cheapest_unvisited.nodelist){
                     if (visited.Contains(n))continue;
                     if (!unvisited.Contains(n)){
-                        n.g_cost=cheapest_unvisited.g_cost+1;
+                        n.g_cost=cheapest_unvisited.g_cost+10;
                         n.GetFCost(goal);
                         unvisited.Add(n);
                     }
@@ -230,8 +231,8 @@ public class PathScript : MonoBehaviour{
             foreach(Node r in resolved){
                 debug_path+=r.name+"->";
                 List<float>lo=new List<float>();
-                lo.Add(r.z);
                 lo.Add(r.x);
+                lo.Add(r.z);
                 lout.Add(lo);
             }
             Debug.Log(debug_path);
