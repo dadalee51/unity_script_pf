@@ -25,10 +25,8 @@ public class PathScript : MonoBehaviour{
         Debug.DrawLine(pos+new Vector3(+0.2f,0,0), pos+new Vector3(0,0,-0.2f), c);
     }
     void DrawGuide(Vector3 pos, Color c){
-        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
-        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
-        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
-        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
+        Debug.DrawLine(pos+new Vector3(+0.3f,0.5f,0), pos+new Vector3(0,0.5f,+0.3f), c);
+        
     }
     void Update(){
         Vector3 azPos = gameObject.transform.position;
