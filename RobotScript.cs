@@ -9,6 +9,8 @@ public class RobotScript : MonoBehaviour{
    List<List<float>> searchPath;
    PathScript ps;
    int PathCount=0;
+    public GameObject target;
+    public Terrain pubT;
    void Start(){
        
        robot = new GameObject(name="robot");
@@ -85,24 +87,23 @@ public class RobotScript : MonoBehaviour{
        robot.transform.position=new Vector3(50,0.25f,50);
        locked=robot.transform.rotation.eulerAngles;
 
-       ps = new PathScript(100,100);
-       Terrain t = Terrain.activeTerrain;
-       GameObject target = GameObject.Find("GoldenEgg");
-       searchPath=ps.Solve(t,robot,target);
+       ps = new PathScript(70,70);
+       pubT = Terrain.activeTerrain;
+       target = GameObject.Find("GoldenEgg");
+       searchPath=ps.Solve(pubT,robot,target);
        
 
    }
  
    void Update(){
         PathCount++;
-        if(PathCount%100==0){
+        if(PathCount%10==0){
             PathCount=0;
-            Terrain t = Terrain.activeTerrain;
-            GameObject target = GameObject.Find("GoldenEgg");
-            searchPath=ps.Solve(t,robot,target);
+            searchPath=ps.Solve(pubT,robot,target);
         }
         if(searchPath!=null){
             foreach(List<float> a in searchPath){
+                //Debug.Log(""+a[0]+","+a[1]);
                 ps.DrawGuide(new Vector3(a[0],0.0f,a[1]),Color.black);
             }
         }
@@ -167,6 +168,8 @@ public class RobotScript : MonoBehaviour{
     void LateUpdate(){
         //keep rotation of robot only for z, we don't want robot to flip.
         robot.transform.rotation = Quaternion.Euler(locked.x, robot.transform.rotation.eulerAngles.y ,locked.z);
+
+        
     }
 
    void AddChild(GameObject parent, GameObject child){

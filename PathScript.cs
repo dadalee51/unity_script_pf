@@ -6,17 +6,25 @@ using System;
 public class PathScript{
     List<List<int>>ig;
     Vector3 lastStart,lastGoal,curStart,curGoal;
-    float zRes,xRes,zRatio,xRatio; //this is the resolution of search.
-    public PathScript(float zr, float xr){
-        this.zRes = zr;
-        this.xRes = xr;
-        this.zRatio = 513/zr;
-        this.xRatio = 513/xr;
-        Debug.Log(this.zRatio);
+    float zr,xr,zRes,xRes,zRatio,xRatio; //this is the resolution of search.
+    int newStartZ, newStartX, newGoalZ, newGoalX;
+    int heightMapRes = 513;
+    //there are two type of resolution, one is the heightMap, one is our own grid to world resolution. don't confuse them.
+    AStar asv;
+    public PathScript(float zr, float xr){ //zr is how many pieces we want to cut our search space.
+        Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
+        this.zr=zr;
+        this.xr=xr;
+        this.zRes = terrainSize.z/zr;//this is the size of our grid
+        this.xRes = terrainSize.x/xr;
+        this.zRatio = heightMapRes/zr; //only used for heightmap detection
+        this.xRatio = heightMapRes/xr;
         ig=null;
+        asv=null;
+        //Debug.Log("TerrainSize:"+terrainSize.z);//100
     }
     void DrawMark(Vector3 pos, Color c){
-        Vector3 spos = pos * this.zRatio;
+        Vector3 spos = pos * this.zRes;
         //pos is our poin of interest on the grid.
         Debug.DrawLine(spos, spos+new Vector3(+0.25f,0,+0.25f), c);
         Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,-0.25f), c);
@@ -24,14 +32,14 @@ public class PathScript{
         Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,+0.25f), c);
     }
     void DrawDiamond(Vector3 pos, Color c){
-        Vector3 spos = pos * this.zRatio;
+        Vector3 spos = pos * this.zRes;
         Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
         Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
         Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
         Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
     }
     public void DrawGuide(Vector3 pos, Color c){
-        Vector3 spos = pos * this.zRatio;
+        Vector3 spos = pos * this.zRes;
         Debug.DrawLine(spos+new Vector3(+0.3f,0,0), spos+new Vector3(0,0,+0.3f), c);
         Debug.DrawLine(spos+new Vector3(-0.3f,0,0), spos+new Vector3(0,0,+0.3f), c);
         Debug.DrawLine(spos+new Vector3(-0.3f,0,0), spos+new Vector3(0,0,-0.3f), c);
@@ -46,33 +54,27 @@ public class PathScript{
             }
             test+="\n";
         }
-        Debug.Log(test);
+        //Debug.Log(test);
     }
 
     //update grid, create most of it if not exist.
     List<List<int>> UpdateGrid(Terrain t, GameObject start, GameObject target){
         if (ig!=null){
-            //checkGrid();
+            checkGrid();
             if (ig.Count==0){
                 Debug.Log("Error with grid count, should not be zero. Check resolution.");
+            }else{
+                Debug.Log(curStart.z +","+ curStart.x);
             }
-            //if this is a Update call, ig will not be null, so we simply update the last position and erase start and goal position 
-            // to avoid multiple start and goal positions.
-            //then just update the ig[j][i] for (start or goal).transform.position.z and x
-            //if (lastStart != null && (int)lastStart.z < ig.Count && (int)lastStart.x < ig[0].Count){
-            /*Debug.Log(ig.Count);
-            Debug.Log("lastStartz and x:"+(int)lastStart.z + ":" +(int)lastStart.x);
-            Debug.Log("curStartz and x:"+(int)curStart.z + ":" +(int)curStart.x);
-            Debug.Log("lastGoal z and x:"+(int)lastGoal.z + ":" +(int)lastGoal.x);
-            Debug.Log("curGoalz and x:"+(int)curGoal.z + ":" +(int)curGoal.x);
-            */
             ig[(int)lastStart.z][(int)lastStart.x]=1;
             ig[(int)lastGoal.z][(int)lastGoal.x]=1;
-            //}
-            curStart.x=start.transform.position.x/this.xRatio;
-            curStart.z=start.transform.position.z/this.zRatio;
-            curGoal.x =target.transform.position.x/this.xRatio;
-            curGoal.z =target.transform.position.z/this.zRatio;
+            //Debug.Log("start pos:"+start.transform.position+", converted:"+curStart);
+            curStart.x=start.transform.position.x/this.xRes;
+            curStart.z=start.transform.position.z/this.zRes;
+            curGoal.x =target.transform.position.x/this.xRes;
+            curGoal.z =target.transform.position.z/this.zRes;
+            DrawDiamond(curStart,Color.red);
+            this.asv.UpdateStartGoalPosition((int)curStart.z,(int)curStart.x,(int)curGoal.z,(int)curGoal.x);
             lastStart = curStart;
             lastGoal = curGoal;
             ig[(int)curStart.z][(int)curStart.x]=3;
@@ -82,9 +84,9 @@ public class PathScript{
         ig= new List<List<int>>();
         lastStart = lastGoal = curStart = curGoal = new Vector3();
         //draw a grid around our start object
-        for (float i=0.0f;i<xRes;i+=1.0f){
+        for (float i=0.0f;i<xr;i+=1.0f){
             List<int>li = new List<int>();
-            for (float j=0.0f;j<zRes;j+=1.0f){
+            for (float j=0.0f;j<zr;j+=1.0f){
                 int type=-1;
                 float height=t.terrainData.GetHeight((int)(j*zRatio),(int)(i*xRatio));
                 if (height > 0.0f){
@@ -96,10 +98,11 @@ public class PathScript{
             }
             ig.Add(li);
         }
-        curStart.x=start.transform.position.x/this.xRatio;
-        curStart.z=start.transform.position.z/this.zRatio;
-        curGoal.x =target.transform.position.x/this.xRatio;
-        curGoal.z =target.transform.position.z/this.zRatio;
+        curStart.x=start.transform.position.x/this.xRes;
+        curStart.z=start.transform.position.z/this.zRes;
+        curGoal.x =target.transform.position.x/this.xRes;
+        curGoal.z =target.transform.position.z/this.zRes;
+        Debug.Log(curStart.z +","+ curStart.x);
         lastStart = curStart;
         lastGoal = curGoal;
         ig[(int)curStart.z][(int)curStart.x]=3;
@@ -109,10 +112,12 @@ public class PathScript{
 
     public List<List<float>> Solve(Terrain t, GameObject start, GameObject target){
         var ig= UpdateGrid(t, start,target);
-        AStar astar=new AStar(ig);
-        //astar.check();
-        var ans = astar.solve();
-        return ans;
+        if (this.asv ==null){
+            this.asv=new AStar(ig);
+        }
+        this.asv.check(); //check the current node list.
+        var ans = this.asv.solve(); //solve it.
+        return ans;    
     }
     /*
         our coordinates: 
@@ -210,6 +215,18 @@ public class PathScript{
                 }
             }
         }
+
+        //we want a method that just update the goal and target position without reconstructing the search nodes.
+        public void UpdateStartGoalPosition(int startZ,int startX, int goalZ, int goalX){
+            //replace old types as just paths.
+            this.start.type=1;
+            this.goal.type=1;
+            this.start=grid[startZ][startX];
+            this.goal=grid[goalZ][goalZ];
+            this.start.type=3;
+            this.goal.type=2;
+        }
+
         public void check(){
             string debug="";
 			for (int i=0; i<grid.Count;i++){
@@ -226,9 +243,15 @@ public class PathScript{
             List<Node> visited = new List<Node>();
             bool targetNotFound=true;
             unvisited.Add(this.start);
+            Debug.Log(this.start+"==This.Start.Node:"+this.start.x+","+this.start.z);
+            Debug.Log(this.goal+"==This.Goal.Node:"+this.goal.x+","+this.goal.z);
             float MAXCOST=(float)Math.Pow(10,10);
             List<Node> resolved=new List<Node>();
+            int countSolveStep=0;//if greater than 100 steps then quit solving.
             while (targetNotFound){
+                countSolveStep++;
+                if(countSolveStep>200)break;
+                //Debug.Log("solve loop begin."+countSolveStep);
                 float cheapest_cost=MAXCOST;
                 Node cheapest_unvisited=null;
                 foreach (Node u in unvisited){
@@ -238,6 +261,8 @@ public class PathScript{
                     if(u.f_cost<cheapest_cost){
                         cheapest_cost=u.f_cost;
                         cheapest_unvisited=u;
+                        Debug.Log("cheaptest_cost:"+u.f_cost);
+                        Debug.Log("cheapest_unvisited:"+u.x+","+u.z);
                     }
                 }
                 if(unvisited.Count>0)unvisited.Remove(cheapest_unvisited);
@@ -246,6 +271,10 @@ public class PathScript{
                     break;
                 }
                 visited.Add(cheapest_unvisited);
+                foreach(Node m in visited){
+                    Debug.Log("Visited:"+m.x+","+m.z);
+                }
+                
                 if (cheapest_unvisited == this.goal){
                     targetNotFound=false;
                     this.goal.parent=cheapest_unvisited.parent;
@@ -270,7 +299,11 @@ public class PathScript{
             resolved.Add(goal);
             Node checker = goal;
             string debug_path="";
+            int countParentCheck=0;
             while(checker.parent != null){
+                //Debug.Log("check parent loop begin."+countParentCheck);
+                if(countParentCheck>200)break;
+                countParentCheck++;
                 debug_path+=checker.name+"->";
                 checker = checker.parent;
                 resolved.Add(checker);
@@ -278,16 +311,16 @@ public class PathScript{
             debug_path+=checker.name;
             //Debug.Log(debug_path);
             resolved.Reverse();
-            //debug_path="";
+            debug_path="";
             List<List<float>>lout=new List<List<float>>();
             foreach(Node r in resolved){
-                //debug_path+=r.name+"->";
+                debug_path+=r.name+"->";
                 List<float>lo=new List<float>();
                 lo.Add(r.x);
                 lo.Add(r.z);
                 lout.Add(lo);
             }
-            //Debug.Log(debug_path);
+            Debug.Log(debug_path);
             return lout;
         }
     }
