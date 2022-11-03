@@ -87,7 +87,7 @@ public class RobotScript : MonoBehaviour{
        robot.transform.position=new Vector3(50,0.25f,50);
        locked=robot.transform.rotation.eulerAngles;
 
-       ps = new PathScript(70,70);
+       ps = new PathScript(50,50);
        pubT = Terrain.activeTerrain;
        target = GameObject.Find("GoldenEgg");
        searchPath=ps.Solve(pubT,robot,target);
