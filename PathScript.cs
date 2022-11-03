@@ -65,13 +65,16 @@ public class PathScript{
     }
 
     public List<List<float>> Solve(Terrain t, GameObject start, GameObject target){
+        if (start.transform.position.x < t.transform.position.x ||
+            start.transform.position.x > t.terrainData.size.x ||
+            start.transform.position.z < t.transform.position.z || 
+            start.transform.position.z > t.terrainData.size.z)return null;
         var ig= UpdateGrid(t, start,target);
         if (this.asv ==null){
             this.asv=new AStar(ig, this.zRes);
         }
         //this.asv.check(); //check the current node list.
-        var ans = this.asv.solve(); //solve it.
-        return ans;    
+        return this.asv.solve();
     }
     /*
         our coordinates: 
@@ -205,12 +208,12 @@ public class PathScript{
             //Debug.Log(this.goal+"==This.Goal.Node:"+this.goal.x+","+this.goal.z);
             float MAXCOST=(float)Math.Pow(10,10);
             List<Node> resolved=new List<Node>();
-            //int countSolveStep=0;//if greater than 100 steps then quit solving.
+            int countSolveStep=0;//if greater than 100 steps then quit solving.
             Node cheapest_unvisited;
             while (targetNotFound){
-                //countSolveStep++;
-                //if(countSolveStep>200)break;
-                //Debug.Log("solve loop counter:"+countSolveStep);
+                countSolveStep++;
+                if(countSolveStep>200)break;
+                //Debug.Log("solve loop counter:"+countSolveStep+",last cheapest unvisited:"+cheapest_unvisited);
                 float cheapest_cost=MAXCOST;
                 cheapest_unvisited=null;
                 foreach (Node u in unvisited){
@@ -220,10 +223,9 @@ public class PathScript{
                     if(u.f_cost<cheapest_cost){
                         cheapest_cost=u.f_cost;
                         cheapest_unvisited=u;
-                     
                     }
                 }
-                //Debug.Log("After one scan, cheaptest_cost:"+cheapest_unvisited.f_cost+" cheapest_unvisited:"+cheapest_unvisited.x+","+cheapest_unvisited.z+" unvisited count:"+unvisited.Count);
+                Debug.Log("After one scan, cheaptest_cost:"+cheapest_unvisited.f_cost+" cheapest_unvisited:"+cheapest_unvisited.x+","+cheapest_unvisited.z+" unvisited count:"+unvisited.Count);
                 if(unvisited.Count>0)unvisited.Remove(cheapest_unvisited);
                 else {
                     Debug.Log("Cannot solve!");
@@ -268,7 +270,7 @@ public class PathScript{
             //resolved path:
             resolved.Add(goal);
             Node checker = goal;
-            string debug_path="";
+            //string debug_path="";
             //int countParentCheck=0;
             while(checker.parent != start){
                 //Debug.Log("check parent loop begin."+countParentCheck);
