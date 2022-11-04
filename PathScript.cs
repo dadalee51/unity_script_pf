@@ -3,247 +3,104 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 //using System.Linq;//for array append
-public class PathScript : MonoBehaviour{
-    public Terrain t;
-    public GameObject target;
-    bool doSolve;
-    List<List<float>>ans = new List<List<float>>();
-    void Start(){
-        doSolve=true;
+public class PathScript{
+    int[,]ig;
+    Vector3 lastStart,lastGoal,curStart,curGoal;
+    float z_grid_size,x_grid_size,z_hmap_ratio,x_hmap_ratio; //this is the resolution of search.
+    int z_sections,x_sections;
+    int newStartZ, newStartX, newGoalZ, newGoalX;
+    int heightMapRes = 513;
+    
+    /*
+    Traversal rule: start with z axis because when printing on console, it shows the z (vertical) direction
+    at least we don't have to guess x (horizontal position)
+    */
+
+    public PathScript(int xr,int zr){ 
+        Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
+        this.z_sections=zr;
+        this.x_sections=xr;
+        this.z_grid_size = terrainSize.z/(float)zr;//terrainSize ratio, eg, real size of a grid, not world.
+        this.x_grid_size = terrainSize.x/(float)xr;
+        this.z_hmap_ratio = heightMapRes/zr;
+        this.x_hmap_ratio = heightMapRes/xr;
+        ig=null;
+        //Debug.Log("TerrainSize:"+terrainSize.z);//100
     }
-    void DrawMark(Vector3 pos, Color c){
-        //pos is our poin of interest on the grid.
-        Debug.DrawLine(pos, pos+new Vector3(+0.25f,0,+0.25f), c);
-        Debug.DrawLine(pos, pos+new Vector3(-0.25f,0,-0.25f), c);
-        Debug.DrawLine(pos, pos+new Vector3(+0.25f,0,-0.25f), c);
-        Debug.DrawLine(pos, pos+new Vector3(-0.25f,0,+0.25f), c);
-    }
-    void DrawDiamond(Vector3 pos, Color c){
-        Debug.DrawLine(pos+new Vector3(+0.2f,0,0), pos+new Vector3(0,0,+0.2f), c);
-        Debug.DrawLine(pos+new Vector3(-0.2f,0,0), pos+new Vector3(0,0,+0.2f), c);
-        Debug.DrawLine(pos+new Vector3(-0.2f,0,0), pos+new Vector3(0,0,-0.2f), c);
-        Debug.DrawLine(pos+new Vector3(+0.2f,0,0), pos+new Vector3(0,0,-0.2f), c);
-    }
-    void DrawGuide(Vector3 pos, Color c){
-        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
-        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,+0.3f), c);
-        Debug.DrawLine(pos+new Vector3(-0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
-        Debug.DrawLine(pos+new Vector3(+0.3f,0,0), pos+new Vector3(0,0,-0.3f), c);
-    }
-    void Update(){
-        Vector3 azPos = gameObject.transform.position;
-        List<List<int>> ig= new List<List<int>>();
-        
-        //draw a grid around our agentzero
-        for (float i=0.0f;i<100.0f;i+=1.0f){    
-            List<int>li = new List<int>();
-            for (float j=0.0f;j<100.0f;j+=1.0f){
-                int type=-1;
-                float height=t.terrainData.GetHeight((int)(j*5.13f),(int)(i*5.13f));
+    //precondition: when ig is null, call this method first.
+    int[,] CreateGrid(Terrain t, GameObject start, GameObject target){
+        ig= new int[x_sections,z_sections];
+        lastStart = lastGoal = curStart = curGoal = new Vector3();
+        for (int j=0;j<z_sections;j++){
+            for (int i=0;i<x_sections;i++){
+                  float height=t.terrainData.GetHeight((int)(i*x_hmap_ratio),(int)(j*z_hmap_ratio));
                 if (height > 0.0f){
-                    DrawMark(new Vector3(j,0,i), Color.red);
-                    type=0;
+                    ig[i,j]=0;
                 }else{
-                    //DrawDiamond(new Vector3(i,0,j), Color.green);
-                    type=1;
+                    ig[i,j]=1;
                 }
-                if (transform.position.z > i && transform.position.z < i+5 && 
-                    transform.position.x > j && transform.position.x < j+5){ //make sure we can find the object in our grid.
-                    type=3;
-                }
-                if (target.transform.position.z > i && target.transform.position.z < i+5 && 
-                    target.transform.position.x > j && target.transform.position.x < j+5){
-                    type=2;
-                }
-                li.Add(type);
-            }
-            ig.Add(li);
-        }
-        if(doSolve){
-            AStar astar=new AStar(ig);
-            astar.check();
-            ans = astar.solve();
-            doSolve=false;
-        }
-        if (ans!=null){
-            foreach(List<float> a in ans){
-                DrawGuide(new Vector3(a[0],0.0f,a[1]),Color.black);
             }
         }
+        curStart.x=start.transform.position.x/this.x_grid_size;
+        curStart.z=start.transform.position.z/this.z_grid_size;
+        curGoal.x =target.transform.position.x/this.x_grid_size;
+        curGoal.z =target.transform.position.z/this.z_grid_size;
+        ig[(int)curStart.x, (int)curStart.z]=3;
+        ig[(int)curGoal.x,  (int)curGoal.z] =2;
+        lastStart = curStart;
+        lastGoal = curGoal;
+        return ig;
+        //the ig should be used for asolver to do update and traversals.
+    }
+
+    public void FindPath(Terrain t, GameObject start, GameObject target){
+        if (start.transform.position.x < t.transform.position.x ||
+            start.transform.position.x > t.terrainData.size.x ||
+            start.transform.position.z < t.transform.position.z || 
+            start.transform.position.z > t.terrainData.size.z)return;
+        int[,] ig= CreateGrid(t, start,target);
+        string ps="";
+        for(int j=0;j<z_sections;j++){
+            for(int i=0;i<x_sections;i++){
+                ps+=ig[i,j]+"";
+            }
+            ps+="\n";
+        }
+        Debug.Log(ps);
     }
     /*
         our coordinates: 
-        x: red axis: width => j
         z: blue axis: depth => i
+        x: red axis: width => j
         y: green axis: height 
         grid dimension [i][j] is equivalent to grid[z][x]
     */
 
-    public class Node{
-        public List<Node> nodelist;
-        public List<float> costlist;
-        public List<bool> diaglist;
-        public float x;
-        public float z;
-        public float f_cost;
-        public float g_cost;
-        public string name;
-        public int type; //the type of this node, 0=wall, 1=path, 2=goal, 3=start
-        public Node parent;
-        public Node(){
-            this.nodelist = new List<Node>();
-            this.costlist=new List<float>();
-            this.diaglist=new List<bool>();//add information about whether it is a diagonal node to the orgiinal node.
-            this.x=0.0f;
-            this.z=0.0f;
-            this.f_cost=-1.0f;
-            this.parent=null;
-        }
-        public void AddNode(Node n, float cost, bool isDiag){
-            if (n==null) return;
-            this.nodelist.Add(n);
-            this.costlist.Add(cost);
-            this.diaglist.Add(isDiag);
-        }
-        public float GetFCost(Node target){
-            this.f_cost=(float)Math.Sqrt(Math.Pow(this.x-target.x ,2) + Math.Pow(this.z-target.z ,2)) + this.g_cost;
-            return this.f_cost;
-        }
-    }
-    //add a Astar class which keeps a internal grid for solving the path.
-    public class AStar{
-        public bool allow_diagonals = true;
-        public bool debug;
-        public Node start;
-        public Node goal;
-        public List<List<Node>> grid;
-        //here we are changing the constructor of the astar from just a bunch of x and z values 
-        // to a 2d array.
-        public AStar(List<List<int>> input_grid){
-            grid = new List<List<Node>>();
-            //create the grid from the width and height, mark the start and goal position, then solve.
-            for (int i=0;i<input_grid.Count;i++){
-                List<Node> ln = new List<Node>();
-                for(int j=0;j<input_grid[i].Count;j++){
-                    Node n = new Node();
-                    n.z=(float)i;
-                    n.x=(float)j;
-                    n.name="["+i+"]["+j+"]"; //name was required to show the path in debug.
-                    ln.Add(n);
-                    if (input_grid[i][j]==3){
-                        this.start=n;
-                        n.type=3;
-                    }else if(input_grid[i][j]==2){
-                        this.goal=n;
-                        n.type=2;
-                    }else if(input_grid[i][j]==1){
-                        n.type=1;//a pathway.
-                    }else if(input_grid[i][j]==0){
-                        n.type=0;//a wall.
-                    }
-                }
-                grid.Add(ln);
-            }
-            //compose nodelist for every node.
-            for (int i=0;i<input_grid.Count;i++){
-                for(int j=0;j<input_grid[i].Count;j++){
-					if(grid[i][j].type==0)continue;
-					if(i-1>=0)grid[i][j].AddNode(grid[i-1][j],10,false);
-					if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j],10,false);
-					if(j-1>=0){
-						grid[i][j].AddNode(grid[i][j-1],10,false);
-						if (this.allow_diagonals){
-							if(i-1>=0)grid[i][j].AddNode(grid[i-1][j-1],14,true);
-							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j-1],14,true);
-						}
-					}
-					if(j+1<grid[i].Count){
-						grid[i][j].AddNode(grid[i][j+1],10,false);
-						if (this.allow_diagonals){
-							if(i+1<grid.Count)grid[i][j].AddNode(grid[i+1][j+1],14,true);
-							if(i-1>grid.Count)grid[i][j].AddNode(grid[i-1][j+1],14,true);
-						}
-					}
-                }
-            }
-        }
-        public void check(){
-            string debug="";
-			for (int i=0; i<grid.Count;i++){
-				for(int j=0; j<grid[i].Count;j++){
-					debug=debug+","+(grid[i][j].type);
-				}
-                debug=debug+"\n";
-			}
-            //Debug.Log(debug);
-		}
+    
 
-        public List<List<float>> solve(){
-            List<Node> unvisited=new List<Node>();
-            List<Node> visited = new List<Node>();
-            bool targetNotFound=true;
-            unvisited.Add(this.start);
-            float MAXCOST=(float)Math.Pow(10,10);
-            List<Node> resolved=new List<Node>();
-            while (targetNotFound){
-                float cheapest_cost=MAXCOST;
-                Node cheapest_unvisited=null;
-                foreach (Node u in unvisited){
-                    if(u.f_cost==MAXCOST){
-                        u.GetFCost(this.goal);
-                    }
-                    if(u.f_cost<cheapest_cost){
-                        cheapest_cost=u.f_cost;
-                        cheapest_unvisited=u;
-                    }
-                }
-                if(unvisited.Count>0)unvisited.Remove(cheapest_unvisited);
-                else {
-                    Debug.Log("Cannot solve!");
-                    break;
-                }
-                visited.Add(cheapest_unvisited);
-                if (cheapest_unvisited == this.goal){
-                    targetNotFound=false;
-                    this.goal.parent=cheapest_unvisited.parent;
-                }
-                int index=0;
-                foreach(Node n in cheapest_unvisited.nodelist){
-                    
-                    if (visited.Contains(n))continue;
-                    if (!unvisited.Contains(n)){
-                        if (cheapest_unvisited.diaglist[index])n.g_cost=cheapest_unvisited.g_cost+14;
-                        else n.g_cost=cheapest_unvisited.g_cost+10;
-                        n.GetFCost(goal);
-                        unvisited.Add(n);
-                    }
-                    n.parent=cheapest_unvisited;
-                    index++;
-                }
-            }
-            //resolved path:
-            resolved.Add(goal);
-            Node checker = goal;
-            string debug_path="";
-            while(checker.parent != null){
-                debug_path+=checker.name+"->";
-                checker = checker.parent;
-                resolved.Add(checker);
-            }
-            debug_path+=checker.name;
-            Debug.Log(debug_path);
-            resolved.Reverse();
-            debug_path="";
-            List<List<float>>lout=new List<List<float>>();
-            foreach(Node r in resolved){
-                debug_path+=r.name+"->";
-                List<float>lo=new List<float>();
-                lo.Add(r.x);
-                lo.Add(r.z);
-                lout.Add(lo);
-            }
-            //Debug.Log(debug_path);
-            return lout;
-        }
+
+    void DrawMark(Vector3 pos, Color c){
+        Vector3 spos = pos * this.z_grid_size;
+        //pos is our poin of interest on the grid.
+        Debug.DrawLine(spos, spos+new Vector3(+0.25f,0,+0.25f), c);
+        Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,-0.25f), c);
+        Debug.DrawLine(spos, spos+new Vector3(+0.25f,0,-0.25f), c);
+        Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,+0.25f), c);
     }
+    void DrawDiamond(Vector3 pos, Color c){
+        Vector3 spos = pos * this.z_grid_size;
+        Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
+        Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
+        Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
+        Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
+    }
+    public void DrawGuide(Vector3 pos, Color c){
+        Vector3 spos = pos * this.z_grid_size;
+        Debug.DrawLine(spos+new Vector3(+0.3f,0,0), spos+new Vector3(0,0,+0.3f), c);
+        Debug.DrawLine(spos+new Vector3(-0.3f,0,0), spos+new Vector3(0,0,+0.3f), c);
+        Debug.DrawLine(spos+new Vector3(-0.3f,0,0), spos+new Vector3(0,0,-0.3f), c);
+        Debug.DrawLine(spos+new Vector3(+0.3f,0,0), spos+new Vector3(0,0,-0.3f), c);
+    }
+
+    
 }
