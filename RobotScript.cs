@@ -86,7 +86,7 @@ public class RobotScript : MonoBehaviour{
        robot.transform.position=new Vector3(50,0.25f,50);
        locked=robot.transform.rotation.eulerAngles;
 
-       ps = new PathScript(200,100);
+       ps = new PathScript(40,40); //how many segments on x and y axis.
        pubT = Terrain.activeTerrain;
        target = GameObject.Find("GoldenEgg");
        ps.FindPath(pubT,robot,target);

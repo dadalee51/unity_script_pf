@@ -2,9 +2,39 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-//using System.Linq;//for array append
+
 public class PathScript{
-    int[,]ig;
+
+    private class Coord{
+        int x;
+        int z;
+        public Coord(x,z){
+            this.x=x;
+            this.z=z;
+        }
+    }
+    int   [,] ig; //the grid keeps the type of path 0 wall, 1 path, 2 goal, 3 start.
+    float [,] h_cost; //distance between this grid and goal. heruistics
+    float [,] g_cost; //accumulated minimal travel distance from start. 
+    float [,] f_cost; //sum of both, 
+    bool  [,] visited; //if visited, don't visit again.
+    Coord [,] parent; //instead of which direction this grid was arrived from.
+    List<Coord> opened; //use a list to keep the unsearched coordinates.
+    
+    
+    //visit each unvisited neighbours, if ig value is not 0, nor visited,     
+    void solve(int sx, int sz, int gx, int gz){
+        bool found = false;
+        while(! found){
+            /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
+                [x-1,z]    start   [x+1, z]
+                [x+1,z+1] [x, z+1] [x+1, z+1]
+            */
+            
+            ig[sx,sz]
+        }
+    }
+
     Vector3 lastStart,lastGoal,curStart,curGoal;
     float z_grid_size,x_grid_size,z_hmap_ratio,x_hmap_ratio; //this is the resolution of search.
     int z_sections,x_sections;
