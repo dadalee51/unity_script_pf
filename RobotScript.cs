@@ -8,9 +8,8 @@ public class RobotScript : MonoBehaviour{
    Vector3 locked;
    List<List<float>> searchPath;
    PathScript ps;
-   int PathCount=0;
-    public GameObject target;
-    public Terrain pubT;
+   public GameObject target;
+   public Terrain pubT;
    void Start(){
        
        robot = new GameObject(name="robot");
@@ -87,26 +86,16 @@ public class RobotScript : MonoBehaviour{
        robot.transform.position=new Vector3(50,0.25f,50);
        locked=robot.transform.rotation.eulerAngles;
 
-       ps = new PathScript(50,50);
+       ps = new PathScript(200,100);
        pubT = Terrain.activeTerrain;
        target = GameObject.Find("GoldenEgg");
-       searchPath=ps.Solve(pubT,robot,target);
+       ps.FindPath(pubT,robot,target);
        
 
    }
  
    void Update(){
-        PathCount++;
-        if(PathCount%10==0){
-            PathCount=0;
-            searchPath=ps.Solve(pubT,robot,target);
-        }
-        if(searchPath!=null){
-            foreach(List<float> a in searchPath){
-                //Debug.Log(""+a[0]+","+a[1]);
-                ps.DrawGuide(new Vector3(a[0],0.0f,a[1]),Color.black);
-            }
-        }
+       
 
        float incremental=10;
        float maxBrake=Mathf.Pow(10,8);
