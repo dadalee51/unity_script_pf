@@ -8,7 +8,7 @@ public class PathScript{
     private class Coord{
         int x;
         int z;
-        public Coord(x,z){
+        public Coord(int x,int z){
             this.x=x;
             this.z=z;
         }
@@ -21,8 +21,7 @@ public class PathScript{
     Coord [,] parent; //instead of which direction this grid was arrived from.
     List<Coord> opened; //use a list to keep the unsearched coordinates.
     
-    
-    //visit each unvisited neighbours, if ig value is not 0, nor visited,     
+    //visit each unvisited neighbours, if ig value is not 0, nor visited,
     void solve(int sx, int sz, int gx, int gz){
         bool found = false;
         while(! found){
@@ -30,8 +29,20 @@ public class PathScript{
                 [x-1,z]    start   [x+1, z]
                 [x+1,z+1] [x, z+1] [x+1, z+1]
             */
+
+            if (ig[sx,sz]==0){
+                //when our bot is in the wall, stop searching.
+                found = true;
+                Debug.Log("no solve.");
+            }
             
-            ig[sx,sz]
+            if (ig[sx,sz]==2){
+                found = true;
+                Debug.Log("target arrived");
+            }
+
+            
+
         }
     }
 
@@ -89,6 +100,7 @@ public class PathScript{
             start.transform.position.z < t.transform.position.z || 
             start.transform.position.z > t.terrainData.size.z)return;
         int[,] ig= CreateGrid(t, start,target);
+        //debugging ps line:
         string ps="";
         for(int j=0;j<z_sections;j++){
             for(int i=0;i<x_sections;i++){
@@ -97,6 +109,8 @@ public class PathScript{
             ps+="\n";
         }
         Debug.Log(ps);
+        //once grid has been created, then solve it and provide a pathway.
+        //TODO
     }
     /*
         our coordinates: 
