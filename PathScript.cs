@@ -22,6 +22,7 @@ public class PathScript{
     List<Coord> opened; //use a list to keep the unsearched coordinates.
     
     //visit each unvisited neighbours, if ig value is not 0, nor visited,
+    //given: ig contains all the ints of the maze.
     void solve(int sx, int sz, int gx, int gz){
         bool found = false;
         while(! found){
