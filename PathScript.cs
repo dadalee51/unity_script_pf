@@ -32,7 +32,7 @@ public class PathScript{
     int heightMapRes = 513;
     
     bool NotVisited(int x, int z){
-        return !visited[x,z] || !added[x,z];
+        return !visited[x,z] && !added[x,z];
     }
 
     bool IsNotWall(int x, int z){
@@ -63,6 +63,7 @@ public class PathScript{
             //how to reduce the chances of putting Coords in hree?
 
             //print all 
+            /*
             string ss="";
             for(int i=0;i<ig.GetLength(0);i++){
                 for (int j=0;j<ig.GetLength(1);j++){
@@ -71,6 +72,7 @@ public class PathScript{
                 ss+="\n";
             }
             Debug.Log(ss);
+            */
             breaker++;
             if(breaker>1600){
                 break;
@@ -81,6 +83,7 @@ public class PathScript{
             */
             
             Coord c= opened[0];
+            if(c.parent!=null)Debug.Log("["+c.x+","+c.z+"]:addedBy["+c.parent.x+","+c.parent.z+"]");
             opened.RemoveAt(0); //c - current - direction could be modelled here.
             if(visited[c.x,c.z])continue; 
             visited[c.x,c.z]=true; //mark visit
