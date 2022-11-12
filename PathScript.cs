@@ -6,12 +6,15 @@ using System;
 public class PathScript{
 
     private class Coord{
-        int x;
-        int z;
-        public Coord(int x,int z){
+        public int x;
+        public int z;
+        public Coord parent;
+        public Coord(int x,int z,Coord parent){
             this.x=x;
             this.z=z;
+            this.parent=parent;
         }
+
     }
     int   [,] ig; //the grid keeps the type of path 0 wall, 1 path, 2 goal, 3 start.
     float [,] h_cost; //distance between this grid and goal. heruistics
@@ -19,39 +22,122 @@ public class PathScript{
     float [,] f_cost; //sum of both, 
     bool  [,] visited; //if visited, don't visit again.
     Coord [,] parent; //instead of which direction this grid was arrived from.
-    List<Coord> opened; //use a list to keep the unsearched coordinates.
+    List<Coord> opened = new List<Coord>(); //use a list to keep the unsearched coordinates.
     
-    //visit each unvisited neighbours, if ig value is not 0, nor visited,
-    //given: ig contains all the ints of the maze.
-    void solve(int sx, int sz, int gx, int gz){
-        bool found = false;
-        while(! found){
-            /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
-                [x-1,z]    start   [x+1, z]
-                [x+1,z+1] [x, z+1] [x+1, z+1]
-            */
-
-            if (ig[sx,sz]==0){
-                //when our bot is in the wall, stop searching.
-                found = true;
-                Debug.Log("no solve.");
-            }
-            
-            if (ig[sx,sz]==2){
-                found = true;
-                Debug.Log("target arrived");
-            }
-
-            
-
-        }
-    }
-
     Vector3 lastStart,lastGoal,curStart,curGoal;
     float z_grid_size,x_grid_size,z_hmap_ratio,x_hmap_ratio; //this is the resolution of search.
     int z_sections,x_sections;
     int newStartZ, newStartX, newGoalZ, newGoalX;
     int heightMapRes = 513;
+    
+    bool NotVisited(int x, int z){
+        return !visited[x,z];
+    }
+
+    bool IsNotWall(int x, int z){
+        return ig[x,z]!=0;
+    }
+    bool CheckBounds(int x, int z){
+        return (x>=0 && x<ig.GetLength(0) && z>=0 && z<ig.GetLength(1));
+    }
+    //visit each unvisited neighbours, if ig value is not 0, nor visited,
+    //given: ig contains all the ints of the maze.
+    void solve(int sx, int sz, int gx, int gz){
+        bool found = false;
+        int A=0,B=0;
+        int breaker=0;
+        opened.Add(new Coord(sx,sz,null)); //start search from sxsz.
+        g_cost[sx,sz]=0; //required to start.
+        while(! found || opened.Count>0){
+            breaker++;
+            if(breaker>5000){
+                break;
+            }
+            /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
+                [x-1,z]    start   [x+1, z]
+                [x-1,z+1] [x, z+1] [x+1, z+1]
+            */
+            if (ig[sx,sz]==0){
+                //when our bot is in the wall, stop searching.
+                found = true;
+                Debug.Log("no solve.");
+            }
+            if (ig[sx,sz]==2){
+                found = true;
+                Debug.Log("target arrived");
+            }
+            Coord c= opened[0];
+            opened.RemoveAt(0); //c - current - direction could be modelled here.
+            if(visited[c.x,c.z])continue;
+            visited[c.x,c.z]=true; //mark visit
+            //mark hcosts
+            h_cost[c.x,c.z]=(float)Math.Sqrt(Math.Pow(sx-gx,2)+Math.Pow(sz-gz,2));
+            //by the time hcost is calcuated, gcode was ready too
+            //get fcost
+            f_cost[c.x,c.z]=g_cost[c.x,c.z]+ h_cost[c.x,c.z];
+            Debug.Log("fcost:"+f_cost[c.x,c.z]+" H:"+h_cost[c.x,c.z]+"gCost"+g_cost[c.x,c.z]);
+            A=c.x-1; B=c.z-1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x  ; B=c.z-1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x+1; B=c.z-1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x-1; B=c.z;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x+1; B=c.z;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x-1; B=c.z+1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x  ; B=c.z+1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
+                opened.Add(new Coord(A,B,c));
+            }
+            A=c.x+1; B=c.z+1;
+            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                //mark gcost, if already exist, check if its smaller
+                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
+                opened.Add(new Coord(A,B,c));
+            }
+
+
+        }//end while loop  (found || opened.Count>0)
+        //print all 
+        string ss="";
+        for(int i=0;i<ig.GetLength(0);i++){
+            for (int j=0;j<ig.GetLength(1);j++){
+                ss+=f_cost[i,j]+" ";
+            }
+            ss+="\n";
+        }
+        Debug.Log(ss);
+    }
+
     
     /*
     Traversal rule: start with z axis because when printing on console, it shows the z (vertical) direction
@@ -68,6 +154,14 @@ public class PathScript{
         this.x_hmap_ratio = heightMapRes/xr;
         ig=null;
         //Debug.Log("TerrainSize:"+terrainSize.z);//100
+        h_cost = new float[x_sections,z_sections]; //distance between this grid and goal. heruistics
+        g_cost = new float[x_sections,z_sections]; //accumulated minimal travel distance from start. 
+        for (int i=0;i<g_cost.GetLength(0);i++)
+            for (int j=0;j<g_cost.GetLength(1);j++)
+                g_cost[i,j]=10000;
+        f_cost = new float[x_sections,z_sections]; //sum of both, 
+        visited = new bool[x_sections,z_sections]; //if visited, don't visit again.
+        parent = new Coord[x_sections,z_sections]; //instead of which direction this grid was arrived from.
     }
     //precondition: when ig is null, call this method first.
     int[,] CreateGrid(Terrain t, GameObject start, GameObject target){
@@ -111,7 +205,11 @@ public class PathScript{
         }
         Debug.Log(ps);
         //once grid has been created, then solve it and provide a pathway.
-        //TODO
+        solve(  (int)start.transform.position.x/x_sections,
+                (int)start.transform.position.z/z_sections,
+                (int)target.transform.position.x/x_sections,
+                (int)target.transform.position.z/z_sections
+        );
     }
     /*
         our coordinates: 
@@ -120,10 +218,6 @@ public class PathScript{
         y: green axis: height 
         grid dimension [i][j] is equivalent to grid[z][x]
     */
-
-    
-
-
     void DrawMark(Vector3 pos, Color c){
         Vector3 spos = pos * this.z_grid_size;
         //pos is our poin of interest on the grid.
