@@ -31,6 +31,7 @@ public class PathScript{
     int newStartZ, newStartX, newGoalZ, newGoalX;
     int heightMapRes = 513;
     
+
     bool NotVisited(int x, int z){
         return !visited[x,z] && !added[x,z];
     }
@@ -41,11 +42,19 @@ public class PathScript{
     bool CheckBounds(int x, int z){
         return (x>=0 && x<ig.GetLength(0) && z>=0 && z<ig.GetLength(1));
     }
+    int[,]GetModel(int x,int z){
+        int [,] model = {{x-1,z-1,14},{x,z-1,10},{x+1,z-1,14},
+                         {x-1,z  ,10},           {x+1,z  ,10},
+                         {x-1,z+1,14},{x,z+1,10},{x+1,z+1,14}};
+        return model;
+    }
     //visit each unvisited neighbours, if ig value is not 0, nor visited,
     //given: ig contains all the ints of the maze.
     void solve(int sx, int sz, int gx, int gz){
         bool found = false;
         int A=0,B=0;
+        float C=0.0f;
+        
         int breaker=0;
         opened.Add(new Coord(sx,sz,null)); //start search from sxsz.
         if (ig[sx,sz]==0){
@@ -58,32 +67,25 @@ public class PathScript{
             Debug.Log("target arrived");
         }
         g_cost[sx,sz]=0; //required to start.
-        while(! found || opened.Count>0){
+        while(! found && opened.Count>0){
             
             //how to reduce the chances of putting Coords in hree?
 
             //print all 
-            /*
-            string ss="";
-            for(int i=0;i<ig.GetLength(0);i++){
-                for (int j=0;j<ig.GetLength(1);j++){
-                    ss+=added[i,j]?1+" ":0+" ";
-                }
-                ss+="\n";
-            }
-            Debug.Log(ss);
-            */
+            
+            
+            
             breaker++;
             if(breaker>1600){
+                Debug.Log("limit break@!");
                 break;
             }
             /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
                 [x-1,z]    start   [x+1, z]
                 [x-1,z+1] [x, z+1] [x+1, z+1]
             */
-            
             Coord c= opened[0];
-            if(c.parent!=null)Debug.Log("["+c.x+","+c.z+"]:addedBy["+c.parent.x+","+c.parent.z+"]");
+            //if(c.parent!=null)Debug.Log("["+c.x+","+c.z+"]:addedBy["+c.parent.x+","+c.parent.z+"]");
             opened.RemoveAt(0); //c - current - direction could be modelled here.
             if(visited[c.x,c.z])continue; 
             visited[c.x,c.z]=true; //mark visit
@@ -93,75 +95,27 @@ public class PathScript{
             //get fcost
             f_cost[c.x,c.z]=g_cost[c.x,c.z]+ h_cost[c.x,c.z];
             //Debug.Log("fcost:"+f_cost[c.x,c.z]+" H:"+h_cost[c.x,c.z]+"gCost"+g_cost[c.x,c.z]);
-
+            int[,]mdl=GetModel(c.x,c.z);
             //don't add to list if already added.
-            A=c.x-1; B=c.z-1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
+            for (int i=0;i< mdl.GetLength(0);i++){
+                A=mdl[i,0];B=mdl[i,1];C=(float)mdl[i,2]/10.0f;
+                if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                    //mark gcost, if already exist, check if its smaller
+                    if (g_cost[A,B]>g_cost[c.x,c.z]+C) g_cost[A,B]=g_cost[c.x,c.z]+C;
+                    added[A,B]=true;
+                    opened.Add(new Coord(A,B,c));
+                }
             }
-            A=c.x  ; B=c.z-1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x+1; B=c.z-1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x-1; B=c.z;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x+1; B=c.z;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x-1; B=c.z+1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x  ; B=c.z+1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1) g_cost[A,B]=g_cost[c.x,c.z]+1;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-            A=c.x+1; B=c.z+1;
-            if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                //mark gcost, if already exist, check if its smaller
-                if (g_cost[A,B]>g_cost[c.x,c.z]+1.4f) g_cost[A,B]=g_cost[c.x,c.z]+1.4f;
-                added[A,B]=true;
-                opened.Add(new Coord(A,B,c));
-                
-            }
-
-
         }//end while loop  (found || opened.Count>0)
-        
+        string ss="";
+        for(int i=0;i<ig.GetLength(0);i++){
+            for (int j=0;j<ig.GetLength(1);j++){
+                //ss+=added[i,j]?1+" ":0+" ";
+                ss+=(int)f_cost[i,j]/5+" ";
+            }
+            ss+="\n";
+        }
+        Debug.Log(ss);
     }
 
     
