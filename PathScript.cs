@@ -2,9 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-
 public class PathScript{
-
     private class Coord{
         public int x;
         public int z;
@@ -14,7 +12,6 @@ public class PathScript{
             this.z=z;
             this.parent=parent;
         }
-
     }
     int   [,] ig; //the grid keeps the type of path 0 wall, 1 path, 2 goal, 3 start.
     float [,] h_cost; //distance between this grid and goal. heruistics
@@ -24,18 +21,14 @@ public class PathScript{
     bool  [,] added; //don't repeatedly add to list if already added.
     Coord [,] parent; //instead of which direction this grid was arrived from.
     List<Coord> opened = new List<Coord>(); //use a list to keep the unsearched coordinates.
-    
     Vector3 lastStart,lastGoal,curStart,curGoal;
     float z_grid_size,x_grid_size,z_hmap_ratio,x_hmap_ratio; //this is the resolution of search.
     int z_sections,x_sections;
     int newStartZ, newStartX, newGoalZ, newGoalX;
     int heightMapRes = 513;
-    
-
     bool NotVisited(int x, int z){
         return !visited[x,z] && !added[x,z];
     }
-
     bool IsNotWall(int x, int z){
         return ig[x,z]!=0;
     }
@@ -48,14 +41,10 @@ public class PathScript{
                          {x-1,z+1,14},{x,z+1,10},{x+1,z+1,14}};
         return model;
     }
-    //visit each unvisited neighbours, if ig value is not 0, nor visited,
-    //given: ig contains all the ints of the maze.
     void solve(int sx, int sz, int gx, int gz){
         bool found = false;
         int A=0,B=0;
         float C=0.0f;
-        
-        int breaker=0;
         opened.Add(new Coord(sx,sz,null)); //start search from sxsz.
         if (ig[sx,sz]==0){
             //when our bot is in the wall, stop searching.
@@ -68,62 +57,43 @@ public class PathScript{
         }
         g_cost[sx,sz]=0; //required to start.
         while(! found && opened.Count>0){
-            
-            //how to reduce the chances of putting Coords in hree?
-
-            //print all 
-            
-            
-            
-            breaker++;
-            if(breaker>1600){
-                Debug.Log("limit break@!");
-                break;
-            }
             /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
                 [x-1,z]    start   [x+1, z]
                 [x-1,z+1] [x, z+1] [x+1, z+1]
             */
             Coord c= opened[0];
-            //if(c.parent!=null)Debug.Log("["+c.x+","+c.z+"]:addedBy["+c.parent.x+","+c.parent.z+"]");
             opened.RemoveAt(0); //c - current - direction could be modelled here.
             if(visited[c.x,c.z])continue; 
+
+            //check if target found.
+            if (ig[c.x,c.z]==2){
+               found = true;
+               break;
+            }
             visited[c.x,c.z]=true; //mark visit
-            //mark hcosts
             h_cost[c.x,c.z]=(float)Math.Sqrt(Math.Pow(sx-gx,2)+Math.Pow(sz-gz,2));
-            //by the time hcost is calcuated, gcode was ready too
-            //get fcost
             f_cost[c.x,c.z]=g_cost[c.x,c.z]+ h_cost[c.x,c.z];
-            //Debug.Log("fcost:"+f_cost[c.x,c.z]+" H:"+h_cost[c.x,c.z]+"gCost"+g_cost[c.x,c.z]);
             int[,]mdl=GetModel(c.x,c.z);
-            //don't add to list if already added.
             for (int i=0;i< mdl.GetLength(0);i++){
                 A=mdl[i,0];B=mdl[i,1];C=(float)mdl[i,2]/10.0f;
                 if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                    //mark gcost, if already exist, check if its smaller
-                    if (g_cost[A,B]>g_cost[c.x,c.z]+C) g_cost[A,B]=g_cost[c.x,c.z]+C;
+                    if (g_cost[A,B]>g_cost[c.x,c.z]+C) {
+                        g_cost[A,B]=g_cost[c.x,c.z]+C;
+                        parent[A,B]=c;
+                    }
                     added[A,B]=true;
                     opened.Add(new Coord(A,B,c));
                 }
             }
         }//end while loop  (found || opened.Count>0)
-        string ss="";
-        for(int i=0;i<ig.GetLength(0);i++){
-            for (int j=0;j<ig.GetLength(1);j++){
-                //ss+=added[i,j]?1+" ":0+" ";
-                ss+=(int)f_cost[i,j]/5+" ";
-            }
-            ss+="\n";
+        Coord ba=parent[gx,gz];
+        string path="";
+        while(ba != null){
+            path+="["+ba.x+","+ba.z+"]";
+            ba=parent[ba.x,ba.z];
         }
-        Debug.Log(ss);
+        Debug.Log(path);
     }
-
-    
-    /*
-    Traversal rule: start with z axis because when printing on console, it shows the z (vertical) direction
-    at least we don't have to guess x (horizontal position)
-    */
-
     public PathScript(int xr,int zr){ 
         Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
         this.z_sections=zr;
@@ -170,26 +140,19 @@ public class PathScript{
         //the ig should be used for asolver to do update and traversals.
     }
 
+
+
     public void FindPath(Terrain t, GameObject start, GameObject target){
         if (start.transform.position.x < t.transform.position.x ||
             start.transform.position.x > t.terrainData.size.x ||
             start.transform.position.z < t.transform.position.z || 
             start.transform.position.z > t.terrainData.size.z)return;
         int[,] ig= CreateGrid(t, start,target);
-        //debugging ps line:
-        string ps="";
-        for(int j=0;j<z_sections;j++){
-            for(int i=0;i<x_sections;i++){
-                ps+=ig[i,j]+"";
-            }
-            ps+="\n";
-        }
-        Debug.Log(ps);
         //once grid has been created, then solve it and provide a pathway.
-        solve(  (int)start.transform.position.x/x_sections,
-                (int)start.transform.position.z/z_sections,
-                (int)target.transform.position.x/x_sections,
-                (int)target.transform.position.z/z_sections
+        solve(  (int)(start.transform.position.x/ x_grid_size),
+                (int)(start.transform.position.z/ z_grid_size),
+                (int)(target.transform.position.x/ x_grid_size),
+                (int)(target.transform.position.z/ z_grid_size)
         );
     }
     /*
