@@ -2,8 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-public class PathScript{
-    private class Coord{
+public class Coord{
         public int x;
         public int z;
         public Coord parent;
@@ -13,6 +12,9 @@ public class PathScript{
             this.parent=parent;
         }
     }
+
+public class PathScript{
+    
     int   [,] ig; //the grid keeps the type of path 0 wall, 1 path, 2 goal, 3 start.
     float [,] h_cost; //distance between this grid and goal. heruistics
     float [,] g_cost; //accumulated minimal travel distance from start. 
@@ -41,7 +43,7 @@ public class PathScript{
                          {x-1,z+1,14},{x,z+1,10},{x+1,z+1,14}};
         return model;
     }
-    void solve(int sx, int sz, int gx, int gz){
+    Coord solve(int sx, int sz, int gx, int gz){
         bool found = false;
         int A=0,B=0;
         float C=0.0f;
@@ -87,12 +89,15 @@ public class PathScript{
             }
         }//end while loop  (found || opened.Count>0)
         Coord ba=parent[gx,gz];
+        Coord bb=null;
         string path="";
         while(ba != null){
             path+="["+ba.x+","+ba.z+"]";
+            bb=ba;
             ba=parent[ba.x,ba.z];
         }
         Debug.Log(path);
+        return bb;//return the last parent before start position.
     }
     public PathScript(int xr,int zr){ 
         Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
@@ -140,20 +145,19 @@ public class PathScript{
         //the ig should be used for asolver to do update and traversals.
     }
 
-
-
-    public void FindPath(Terrain t, GameObject start, GameObject target){
+    public Coord FindPath(Terrain t, GameObject start, GameObject target){
         if (start.transform.position.x < t.transform.position.x ||
             start.transform.position.x > t.terrainData.size.x ||
             start.transform.position.z < t.transform.position.z || 
-            start.transform.position.z > t.terrainData.size.z)return;
+            start.transform.position.z > t.terrainData.size.z)return null;
         int[,] ig= CreateGrid(t, start,target);
         //once grid has been created, then solve it and provide a pathway.
-        solve(  (int)(start.transform.position.x/ x_grid_size),
+        Coord cr = solve(  (int)(start.transform.position.x/ x_grid_size),
                 (int)(start.transform.position.z/ z_grid_size),
                 (int)(target.transform.position.x/ x_grid_size),
                 (int)(target.transform.position.z/ z_grid_size)
         );
+        return cr;
     }
     /*
         our coordinates: 
@@ -184,6 +188,4 @@ public class PathScript{
         Debug.DrawLine(spos+new Vector3(-0.3f,0,0), spos+new Vector3(0,0,-0.3f), c);
         Debug.DrawLine(spos+new Vector3(+0.3f,0,0), spos+new Vector3(0,0,-0.3f), c);
     }
-
-    
 }
