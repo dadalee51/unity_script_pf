@@ -90,10 +90,32 @@ public class RobotScript : MonoBehaviour{
    }
  
    void Update(){
-       ps = new PathScript(40,40); //how many segments on x and y axis.
-       Coord cr = ps.FindPath(pubT,robot,target);
-       if (cr != null)Debug.Log("next target:"+cr.x + ","+ cr.z);
-       Debug.Log("robot is @:"+robot.transform.position.x+","+robot.transform.position.z+",");
+        int grid_cut=50;
+        ps = new PathScript(grid_cut,grid_cut); //how many segments on x and y axis.
+        Coord cr = ps.FindPath(pubT,robot,target);
+        if (cr != null){
+            float cx=cr.x*100/grid_cut;
+            float cz=cr.z*100/grid_cut;
+            float rx=robot.transform.position.x;
+            float rz=robot.transform.position.z;
+            //Debug.Log("next target:"+cr.x*100/40 + ","+ cr.z*100/40);
+            //Debug.Log("robot is @:"+robot.transform.position.x+","+robot.transform.position.z+",");
+            //Debug.Log("robot rotation on y axis is:"+robot.transform.localRotation.eulerAngles.z);
+            //find out angle robot should be moving towards if heading is 0
+            //Debug.Log("Angle from headnig is:"+Mathf.Atan2(cx-rx,cz-rz)* Mathf.Rad2Deg +", localRY:"+robot.transform.rotation.eulerAngles.y);
+            //move towards angle:
+            float nextAngle=Mathf.Atan2(cx-rx,cz-rz)* Mathf.Rad2Deg;
+            if(nextAngle < 0)nextAngle+=360.0f;
+            //Debug.Log(nextAngle+","+robot.transform.rotation.eulerAngles.y);
+            //potential problem here, when value change from 18 to 270, we should turn to minus instead the other way.
+            if (robot.transform.rotation.eulerAngles.y > nextAngle) robot.transform.Rotate(new Vector3(0,-2.0f,0));
+            else robot.transform.Rotate(new Vector3(0,2.0f,0));
+            
+            
+
+        }
+       
+       
 
        float incremental=10;
        float maxBrake=Mathf.Pow(10,8);

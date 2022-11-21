@@ -43,6 +43,19 @@ public class PathScript{
                          {x-1,z+1,14},{x,z+1,10},{x+1,z+1,14}};
         return model;
     }
+
+    int GetLowestFCostFromOpened(List<Coord>o){
+        float minF=10000000.0f; //incredibly large to start
+        int pull=-1;
+        for (int i=0;i<o.Count;i++){
+            if(minF > f_cost[o[i].x, o[i].z]){
+                minF = f_cost[o[i].x, o[i].z];
+                pull=i;
+            }
+        }
+        return pull;
+    }
+
     Coord solve(int sx, int sz, int gx, int gz){
         bool found = false;
         int A=0,B=0;
@@ -63,8 +76,10 @@ public class PathScript{
                 [x-1,z]    start   [x+1, z]
                 [x-1,z+1] [x, z+1] [x+1, z+1]
             */
-            Coord c= opened[0];
-            opened.RemoveAt(0); //c - current - direction could be modelled here.
+            //sort opened.
+            int pull=GetLowestFCostFromOpened(opened);
+            Coord c= opened[pull];
+            opened.RemoveAt(pull); //c - current - direction could be modelled here.
             if(visited[c.x,c.z])continue; 
 
             //check if target found.
@@ -79,10 +94,8 @@ public class PathScript{
             for (int i=0;i< mdl.GetLength(0);i++){
                 A=mdl[i,0];B=mdl[i,1];C=(float)mdl[i,2]/10.0f;
                 if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                    if (g_cost[A,B]>g_cost[c.x,c.z]+C) {
-                        g_cost[A,B]=g_cost[c.x,c.z]+C;
-                        parent[A,B]=c;
-                    }
+                    if(g_cost[c.x,c.z]+C < g_cost[A,B]) g_cost[A,B]=g_cost[c.x,c.z]+C;
+                    parent[A,B]=c;
                     added[A,B]=true;
                     opened.Add(new Coord(A,B,c));
                 }
@@ -90,14 +103,18 @@ public class PathScript{
         }//end while loop  (found || opened.Count>0)
         Coord ba=parent[gx,gz];
         Coord bb=null;
+        Coord bc=null;
         string path="";
         while(ba != null){
+            DrawMark(new Vector3(ba.x,1.0f,ba.z),Color.red);
             path+="["+ba.x+","+ba.z+"]";
+            bc=bb;
             bb=ba;
             ba=parent[ba.x,ba.z];
+            
         }
         Debug.Log(path);
-        return bb;//return the last parent before start position.
+        return bc;//return the last parent before start position.
     }
     public PathScript(int xr,int zr){ 
         Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
