@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
- 
 public class RobotScript : MonoBehaviour{
    WheelCollider wcA,wcB,wcC;
    GameObject robot;
@@ -11,7 +10,6 @@ public class RobotScript : MonoBehaviour{
    public GameObject target;
    public Terrain pubT;
    void Start(){
-       
        robot = new GameObject(name="robot");
        robot.AddComponent<Rigidbody>();
        robot.GetComponent<Rigidbody>().mass=2;
@@ -39,7 +37,7 @@ public class RobotScript : MonoBehaviour{
        //Instead of a Spherical tyre, we use the wheel we created from Fusion.
        GameObject omniWheel=Instantiate(Resources.Load("mtrAv3",typeof(GameObject))) as GameObject;
        omniWheel.transform.localRotation*=Quaternion.Euler(0,0,90);
-      
+
        omniWheel.name="omniWheel";
        omniWheel.AddComponent<MeshRenderer>();
        omniWheel.GetComponent<Renderer>().material.color=Color.red;
@@ -69,7 +67,6 @@ public class RobotScript : MonoBehaviour{
        wcC.suspensionSpring=jsc;
        wcA.mass=wcB.mass=wcC.mass=1.5f;
  
- 
        wheelA.transform.rotation*=Quaternion.Euler(0,0,0);
        wheelA.transform.localPosition+=new Vector3(2,0,0);
        robot.AddComponent<FixedJoint>().connectedBody=wheelA.GetComponent<Rigidbody>();
@@ -85,17 +82,17 @@ public class RobotScript : MonoBehaviour{
        //place robot somewhere on the plane create by other process
        robot.transform.position=new Vector3(50,0.25f,50);
        locked=robot.transform.rotation.eulerAngles;
-
-       ps = new PathScript(40,40); //how many segments on x and y axis.
+       
        pubT = Terrain.activeTerrain;
        target = GameObject.Find("GoldenEgg");
+       ps = new PathScript(40,40); //how many segments on x and y axis.
        ps.FindPath(pubT,robot,target);
-       
-
    }
  
    void Update(){
-       
+       ps = new PathScript(40,40); //how many segments on x and y axis.
+       Coord cr = ps.FindPath(pubT,robot,target);
+       if (cr != null)Debug.Log("next target"+cr.x + ","+ cr.z);
 
        float incremental=10;
        float maxBrake=Mathf.Pow(10,8);
@@ -153,20 +150,12 @@ public class RobotScript : MonoBehaviour{
             }
         }
     }
-
     void LateUpdate(){
-        //keep rotation of robot only for z, we don't want robot to flip.
-        robot.transform.rotation = Quaternion.Euler(locked.x, robot.transform.rotation.eulerAngles.y ,locked.z);
-
-        
+        robot.transform.rotation = Quaternion.Euler(locked.x, robot.transform.rotation.eulerAngles.y ,locked.z);   
     }
-
-   void AddChild(GameObject parent, GameObject child){
-       child.transform.SetParent(parent.transform);
-   }
-
-   
-
+    void AddChild(GameObject parent, GameObject child){
+        child.transform.SetParent(parent.transform);
+    }
     void DrawLine(Vector3 start, Vector3 end, Color color, float duration = 0.1f)
     {
         GameObject myLine = new GameObject();
@@ -182,8 +171,6 @@ public class RobotScript : MonoBehaviour{
         lr.SetPosition(1, end);
         GameObject.Destroy(myLine, duration);
     }
-
-
 }
  
  
