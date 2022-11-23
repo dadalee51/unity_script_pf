@@ -93,6 +93,11 @@ public class RobotScript : MonoBehaviour{
         int grid_cut=50;
         ps = new PathScript(grid_cut,grid_cut); //how many segments on x and y axis.
         Coord cr = ps.FindPath(pubT,robot,target);
+        //while (cr !=null){
+            //Debug.Log(":"+cr.x+","+cr.z);
+            //cr=cr.next;
+        //}
+        cr=cr.next;
         if (cr != null){
             float cx=cr.x*100/grid_cut;
             float cz=cr.z*100/grid_cut;

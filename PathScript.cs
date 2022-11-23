@@ -6,15 +6,16 @@ public class Coord{
         public int x;
         public int z;
         public Coord parent;
+        public Coord next;
         public Coord(int x,int z,Coord parent){
             this.x=x;
             this.z=z;
             this.parent=parent;
+            this.next=null;
         }
     }
-
 public class PathScript{
-    
+    float MAP_MAX = (float)Math.Pow(10,10);
     int   [,] ig; //the grid keeps the type of path 0 wall, 1 path, 2 goal, 3 start.
     float [,] h_cost; //distance between this grid and goal. heruistics
     float [,] g_cost; //accumulated minimal travel distance from start. 
@@ -23,11 +24,35 @@ public class PathScript{
     bool  [,] added; //don't repeatedly add to list if already added.
     Coord [,] parent; //instead of which direction this grid was arrived from.
     List<Coord> opened = new List<Coord>(); //use a list to keep the unsearched coordinates.
+    List<Coord> closed = new List<Coord>(); //this list keeps all the minimum tree. back traverse using parent will guarantee the shortest path.
     Vector3 lastStart,lastGoal,curStart,curGoal;
     float z_grid_size,x_grid_size,z_hmap_ratio,x_hmap_ratio; //this is the resolution of search.
     int z_sections,x_sections;
     int newStartZ, newStartX, newGoalZ, newGoalX;
-    int heightMapRes = 513;
+    int heightMapRes = 513; //please make sure dimension of terrain is set to 100x100x100
+    /*Constructor*/
+    public PathScript(int xr,int zr){ 
+        Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
+        this.z_sections=zr;
+        this.x_sections=xr;
+        this.z_grid_size = terrainSize.z/(float)zr;//terrainSize ratio, eg, real size of a grid, not world.
+        this.x_grid_size = terrainSize.x/(float)xr;
+        this.z_hmap_ratio = heightMapRes/zr;
+        this.x_hmap_ratio = heightMapRes/xr;
+        ig=null;
+        h_cost = new float[x_sections,z_sections]; //distance between this grid and goal. heruistics
+        g_cost = new float[x_sections,z_sections]; //accumulated minimal travel distance from start. 
+        f_cost = new float[x_sections,z_sections]; //sum of all cost
+        for (int i=0;i<g_cost.GetLength(0);i++){
+            for (int j=0;j<g_cost.GetLength(1);j++){
+                g_cost[i,j]=MAP_MAX;//cost is large initially. //this is to avoid search goes off the limit.
+                f_cost[i,j]=MAP_MAX;//cost is large initially. //this is to avoid search goes off the limit.
+            }
+        }
+        visited = new bool[x_sections,z_sections]; //if visited, don't visit again.
+        added = new bool[x_sections,z_sections]; //if visited, don't visit again.
+        parent = new Coord[x_sections,z_sections]; //instead of which direction this grid was arrived from.
+    }
     bool NotVisited(int x, int z){
         return !visited[x,z] && !added[x,z];
     }
@@ -38,14 +63,13 @@ public class PathScript{
         return (x>=0 && x<ig.GetLength(0) && z>=0 && z<ig.GetLength(1));
     }
     int[,]GetModel(int x,int z){
-        int [,] model = {{x-1,z-1,14},{x,z-1,10},{x+1,z-1,14},
-                         {x-1,z  ,10},           {x+1,z  ,10},
-                         {x-1,z+1,14},{x,z+1,10},{x+1,z+1,14}};
+        int [,] model = {{x-1,z-1,1414},{x,z-1,1000},{x+1,z-1,1414},
+                         {x-1,z  ,1000},             {x+1,z  ,1000},
+                         {x-1,z+1,1414},{x,z+1,1000},{x+1,z+1,1414}};
         return model;
     }
-
     int GetLowestFCostFromOpened(List<Coord>o){
-        float minF=10000000.0f; //incredibly large to start
+        float minF=Single.MaxValue; //incredibly large to start
         int pull=-1;
         for (int i=0;i<o.Count;i++){
             if(minF > f_cost[o[i].x, o[i].z]){
@@ -55,88 +79,6 @@ public class PathScript{
         }
         return pull;
     }
-
-    Coord solve(int sx, int sz, int gx, int gz){
-        bool found = false;
-        int A=0,B=0;
-        float C=0.0f;
-        opened.Add(new Coord(sx,sz,null)); //start search from sxsz.
-        if (ig[sx,sz]==0){
-            //when our bot is in the wall, stop searching.
-            found = true;
-            Debug.Log("no solve.");
-        }
-        if (ig[sx,sz]==2){
-            found = true;
-            Debug.Log("target arrived");
-        }
-        g_cost[sx,sz]=0; //required to start.
-        while(! found && opened.Count>0){
-            /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
-                [x-1,z]    start   [x+1, z]
-                [x-1,z+1] [x, z+1] [x+1, z+1]
-            */
-            //sort opened.
-            int pull=GetLowestFCostFromOpened(opened);
-            Coord c= opened[pull];
-            opened.RemoveAt(pull); //c - current - direction could be modelled here.
-            if(visited[c.x,c.z])continue; 
-
-            //check if target found.
-            if (ig[c.x,c.z]==2){
-               found = true;
-               break;
-            }
-            visited[c.x,c.z]=true; //mark visit
-            h_cost[c.x,c.z]=(float)Math.Sqrt(Math.Pow(sx-gx,2)+Math.Pow(sz-gz,2));
-            f_cost[c.x,c.z]=g_cost[c.x,c.z]+ h_cost[c.x,c.z];
-            int[,]mdl=GetModel(c.x,c.z);
-            for (int i=0;i< mdl.GetLength(0);i++){
-                A=mdl[i,0];B=mdl[i,1];C=(float)mdl[i,2]/10.0f;
-                if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
-                    if(g_cost[c.x,c.z]+C < g_cost[A,B]) g_cost[A,B]=g_cost[c.x,c.z]+C;
-                    parent[A,B]=c;
-                    added[A,B]=true;
-                    opened.Add(new Coord(A,B,c));
-                }
-            }
-        }//end while loop  (found || opened.Count>0)
-        Coord ba=parent[gx,gz];
-        Coord bb=null;
-        Coord bc=null;
-        string path="";
-        while(ba != null){
-            DrawMark(new Vector3(ba.x,1.0f,ba.z),Color.red);
-            path+="["+ba.x+","+ba.z+"]";
-            bc=bb;
-            bb=ba;
-            ba=parent[ba.x,ba.z];
-            
-        }
-        Debug.Log(path);
-        return bc;//return the last parent before start position.
-    }
-    public PathScript(int xr,int zr){ 
-        Vector3 terrainSize = Terrain.activeTerrain.terrainData.size;
-        this.z_sections=zr;
-        this.x_sections=xr;
-        this.z_grid_size = terrainSize.z/(float)zr;//terrainSize ratio, eg, real size of a grid, not world.
-        this.x_grid_size = terrainSize.x/(float)xr;
-        this.z_hmap_ratio = heightMapRes/zr;
-        this.x_hmap_ratio = heightMapRes/xr;
-        ig=null;
-        //Debug.Log("TerrainSize:"+terrainSize.z);//100
-        h_cost = new float[x_sections,z_sections]; //distance between this grid and goal. heruistics
-        g_cost = new float[x_sections,z_sections]; //accumulated minimal travel distance from start. 
-        for (int i=0;i<g_cost.GetLength(0);i++)
-            for (int j=0;j<g_cost.GetLength(1);j++)
-                g_cost[i,j]=(float)Math.Pow(10,10);//g cost is large initially.
-        f_cost = new float[x_sections,z_sections]; //sum of both, 
-        visited = new bool[x_sections,z_sections]; //if visited, don't visit again.
-        added = new bool[x_sections,z_sections]; //if visited, don't visit again.
-        parent = new Coord[x_sections,z_sections]; //instead of which direction this grid was arrived from.
-    }
-    //precondition: when ig is null, call this method first.
     int[,] CreateGrid(Terrain t, GameObject start, GameObject target){
         ig= new int[x_sections,z_sections];
         lastStart = lastGoal = curStart = curGoal = new Vector3();
@@ -159,9 +101,7 @@ public class PathScript{
         lastStart = curStart;
         lastGoal = curGoal;
         return ig;
-        //the ig should be used for asolver to do update and traversals.
     }
-
     public Coord FindPath(Terrain t, GameObject start, GameObject target){
         if (start.transform.position.x < t.transform.position.x ||
             start.transform.position.x > t.terrainData.size.x ||
@@ -176,28 +116,63 @@ public class PathScript{
         );
         return cr;
     }
-    /*
-        our coordinates: 
-        z: blue axis: depth => i
-        x: red axis: width => j
-        y: green axis: height 
-        grid dimension [i][j] is equivalent to grid[z][x]
-    */
-    void DrawMark(Vector3 pos, Color c){
-        Vector3 spos = pos * this.z_grid_size;
-        //pos is our poin of interest on the grid.
-        Debug.DrawLine(spos, spos+new Vector3(+0.25f,0,+0.25f), c);
-        Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,-0.25f), c);
-        Debug.DrawLine(spos, spos+new Vector3(+0.25f,0,-0.25f), c);
-        Debug.DrawLine(spos, spos+new Vector3(-0.25f,0,+0.25f), c);
+
+    Coord solve(int sx, int sz, int gx, int gz){
+        bool found = false;
+        int A=0,B=0;
+        float C=0.0f;
+        opened.Add(new Coord(sx,sz,null)); //start search from sxsz.
+        if (ig[sx,sz]==0){
+            //when our bot is in the wall, stop searching.
+            found = true;
+            Debug.Log("no solve.");
+        }
+        if (ig[sx,sz]==2){
+            found = true;
+            Debug.Log("target arrived");
+        }
+        g_cost[sx,sz]=0; //required to start.
+        while(! found && opened.Count>0){
+            /*  [x-1,z-1] [x ,z-1] [x+1, z-1]
+                [x-1,z]    start   [x+1, z]
+                [x-1,z+1] [x, z+1] [x+1, z+1]
+            */
+            int pull=GetLowestFCostFromOpened(opened);//get smallest of all in opened.
+            Coord c= opened[pull];
+            opened.RemoveAt(pull); 
+            if(visited[c.x,c.z])continue; 
+            //check if target found.
+            if (ig[c.x,c.z]==2){
+               found = true;
+               break;
+            }
+            visited[c.x,c.z]=true; //mark visit
+            int[,]mdl=GetModel(c.x,c.z);
+            for (int i=0;i< mdl.GetLength(0);i++){//go through neightbours
+                A=mdl[i,0];B=mdl[i,1];C=(float)mdl[i,2]/1000.0f;//be accurate as possible.
+                if (CheckBounds(A,B) && NotVisited(A,B) && IsNotWall(A,B))  {
+                    if(g_cost[c.x,c.z]+C<g_cost[A,B])g_cost[A,B]=g_cost[c.x,c.z]+C;
+                    if(h_cost[A,B]!=0.0f)h_cost[A,B]=(float)Math.Sqrt(Math.Pow((A-gx),2)+Math.Pow((B-gz),2));
+                    if(f_cost[A,B]==MAP_MAX)f_cost[A,B]=g_cost[A,B]+ h_cost[A,B];
+                    parent[A,B]=c;
+                    added[A,B]=true;
+                    opened.Add(new Coord(A,B,c));
+                }else if(CheckBounds(A,B) && IsNotWall(A,B)){//just update gcost, otherwise gcost is not correct.
+                    if(g_cost[c.x,c.z]+C<g_cost[A,B])g_cost[A,B]=g_cost[c.x,c.z]+C;
+                }
+            }
+        }//end while loop  (found || opened.Count>0)
+        Coord ba=parent[gx,gz];
+        Coord bb=new Coord(0,0,null);
+        while(ba != null){
+            DrawGuide(new Vector3(ba.x,1.0f,ba.z),Color.red);
+            bb=ba;
+            ba=parent[ba.x,ba.z];
+            if(ba!=null)ba.next=bb;
+        }
+        return bb; //because ba is now null(parent of start)
     }
-    void DrawDiamond(Vector3 pos, Color c){
-        Vector3 spos = pos * this.z_grid_size;
-        Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
-        Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,+0.2f), c);
-        Debug.DrawLine(spos+new Vector3(-0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
-        Debug.DrawLine(spos+new Vector3(+0.2f,0,0), spos+new Vector3(0,0,-0.2f), c);
-    }
+
     public void DrawGuide(Vector3 pos, Color c){
         Vector3 spos = pos * this.z_grid_size;
         Debug.DrawLine(spos+new Vector3(+0.3f,0,0), spos+new Vector3(0,0,+0.3f), c);
