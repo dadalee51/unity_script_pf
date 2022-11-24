@@ -29,6 +29,8 @@ public class RobotScript : MonoBehaviour{
        wcA = wheelJoint.AddComponent<WheelCollider>();
        wcA.radius = 1;
        WheelFrictionCurve a = wcA.sidewaysFriction;
+       a.stiffness=0.5f;
+       wcA.sidewaysFriction=a; //assign the variable back to property
        WheelFrictionCurve f = wcA.forwardFriction;
        f.stiffness=3;
        wcA.forwardFriction=f; //assign the variable back to property
@@ -69,6 +71,7 @@ public class RobotScript : MonoBehaviour{
        wheelA.transform.localPosition+=new Vector3(2,0,0);
        robot.AddComponent<FixedJoint>().connectedBody=wheelA.GetComponent<Rigidbody>();
  
+
        wheelB.transform.rotation*=Quaternion.Euler(0,90,0);
        wheelB.transform.localPosition+=new Vector3(0,0,-2);
        robot.AddComponent<FixedJoint>().connectedBody=wheelB.GetComponent<Rigidbody>();

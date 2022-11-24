@@ -100,11 +100,13 @@ public class PathScript{
         curStart.z=start.transform.position.z/this.z_grid_size; //centred
         curGoal.x =target.transform.position.x/this.x_grid_size; //centred;
         curGoal.z =target.transform.position.z/this.z_grid_size; //centred;
+
         ig[(int)curStart.x, (int)curStart.z]=3;
         ig[(int)curGoal.x,  (int)curGoal.z] =2;
         lastStart = curStart;
         lastGoal = curGoal;
         return ig;
+
     }
     public Coord FindPath(Terrain t, GameObject start, GameObject target){
         if (start.transform.position.x < t.transform.position.x ||
