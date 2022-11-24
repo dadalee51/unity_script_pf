@@ -79,11 +79,15 @@ public class PathScript{
         }
         return pull;
     }
+    /*
+     * CreateGrid based on the height of the map, at this moment everything above 0 is a wall.
+     * please add your threashold here.
+    */
     int[,] CreateGrid(Terrain t, GameObject start, GameObject target){
         ig= new int[x_sections,z_sections];
         lastStart = lastGoal = curStart = curGoal = new Vector3();
-        for (int j=0;j<z_sections;j++){
-            for (int i=0;i<x_sections;i++){
+        for (int j=0;j<z_sections-1;j++){
+            for (int i=0;i<x_sections-1;i++){
                   float height=t.terrainData.GetHeight((int)(i*x_hmap_ratio),(int)(j*z_hmap_ratio));
                 if (height > 0.0f){
                     ig[i,j]=0;
@@ -92,10 +96,10 @@ public class PathScript{
                 }
             }
         }
-        curStart.x=start.transform.position.x/this.x_grid_size;
-        curStart.z=start.transform.position.z/this.z_grid_size;
-        curGoal.x =target.transform.position.x/this.x_grid_size;
-        curGoal.z =target.transform.position.z/this.z_grid_size;
+        curStart.x=start.transform.position.x/this.x_grid_size; //centred
+        curStart.z=start.transform.position.z/this.z_grid_size; //centred
+        curGoal.x =target.transform.position.x/this.x_grid_size; //centred;
+        curGoal.z =target.transform.position.z/this.z_grid_size; //centred;
         ig[(int)curStart.x, (int)curStart.z]=3;
         ig[(int)curGoal.x,  (int)curGoal.z] =2;
         lastStart = curStart;
@@ -164,12 +168,15 @@ public class PathScript{
         }//end while loop  (found || opened.Count>0)
         Coord ba=parent[gx,gz];
         Coord bb=new Coord(0,0,null);
+        //string ps="";
         while(ba != null){
-            DrawGuide(new Vector3(ba.x,1.0f,ba.z),Color.red);
+            DrawGuide(new Vector3(ba.x,4.0f,ba.z),Color.blue);
             bb=ba;
             ba=parent[ba.x,ba.z];
+            //if(ba!=null)ps+="["+ba.x+"],["+ba.z+"]";
             if(ba!=null)ba.next=bb;
         }
+        //Debug.Log(ps);
         return bb; //because ba is now null(parent of start)
     }
 

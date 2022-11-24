@@ -29,8 +29,6 @@ public class RobotScript : MonoBehaviour{
        wcA = wheelJoint.AddComponent<WheelCollider>();
        wcA.radius = 1;
        WheelFrictionCurve a = wcA.sidewaysFriction;
-       a.stiffness=0.5f;
-       wcA.sidewaysFriction=a; //assign the variable back to property
        WheelFrictionCurve f = wcA.forwardFriction;
        f.stiffness=3;
        wcA.forwardFriction=f; //assign the variable back to property
@@ -59,8 +57,8 @@ public class RobotScript : MonoBehaviour{
        wcA.suspensionDistance=wcB.suspensionDistance=wcC.suspensionDistance=0.01f;
        wcA.forceAppPointDistance=wcB.forceAppPointDistance=wcC.forceAppPointDistance=0;
        JointSpring jsa=wcA.suspensionSpring,jsb=wcB.suspensionSpring,jsc=wcC.suspensionSpring;
-       jsa.spring=jsb.spring=jsc.spring=0;
-       jsa.damper=jsb.damper=jsc.damper=0;
+       jsa.spring=jsb.spring=jsc.spring=10;
+       jsa.damper=jsb.damper=jsc.damper=10;
        jsa.targetPosition=jsb.targetPosition=jsc.targetPosition=0;
        wcA.suspensionSpring=jsa;
        wcB.suspensionSpring=jsb;
@@ -71,56 +69,48 @@ public class RobotScript : MonoBehaviour{
        wheelA.transform.localPosition+=new Vector3(2,0,0);
        robot.AddComponent<FixedJoint>().connectedBody=wheelA.GetComponent<Rigidbody>();
  
-       wheelB.transform.rotation*=Quaternion.Euler(0,120,0);
-       wheelB.transform.localPosition+=new Vector3(-1f,0,-1.732f);
+       wheelB.transform.rotation*=Quaternion.Euler(0,90,0);
+       wheelB.transform.localPosition+=new Vector3(0,0,-2);
        robot.AddComponent<FixedJoint>().connectedBody=wheelB.GetComponent<Rigidbody>();
  
-       wheelC.transform.rotation*=Quaternion.Euler(0,240,0);
-       wheelC.transform.localPosition+=new Vector3(-1f,0,1.732f);
+       wheelC.transform.rotation*=Quaternion.Euler(0,180,0);
+       wheelC.transform.localPosition+=new Vector3(-2,0,0);
        robot.AddComponent<FixedJoint>().connectedBody=wheelC.GetComponent<Rigidbody>();
  
        //place robot somewhere on the plane create by other process
-       robot.transform.position=new Vector3(50,0.25f,50);
+       robot.transform.position=new Vector3(500,0.35f,500);
        locked=robot.transform.rotation.eulerAngles;
        
        pubT = Terrain.activeTerrain;
        target = GameObject.Find("GoldenEgg");
-       ps = new PathScript(40,40); //how many segments on x and y axis.
-       ps.FindPath(pubT,robot,target);
    }
  
    void Update(){
         int grid_cut=50;
         ps = new PathScript(grid_cut,grid_cut); //how many segments on x and y axis.
         Coord cr = ps.FindPath(pubT,robot,target);
-        //while (cr !=null){
-            //Debug.Log(":"+cr.x+","+cr.z);
-            //cr=cr.next;
-        //}
-        cr=cr.next;
+        if(cr!=null && cr.next!=null && cr.next.next!=null)cr=cr.next.next;//our robot was too big and need to focus on the third point away.
         if (cr != null){
-            float cx=cr.x*100/grid_cut;
-            float cz=cr.z*100/grid_cut;
+            float cx=cr.x*Terrain.activeTerrain.terrainData.size.x/grid_cut;
+            float cz=cr.z*Terrain.activeTerrain.terrainData.size.z/grid_cut;
             float rx=robot.transform.position.x;
             float rz=robot.transform.position.z;
-            //Debug.Log("next target:"+cr.x*100/40 + ","+ cr.z*100/40);
-            //Debug.Log("robot is @:"+robot.transform.position.x+","+robot.transform.position.z+",");
-            //Debug.Log("robot rotation on y axis is:"+robot.transform.localRotation.eulerAngles.z);
-            //find out angle robot should be moving towards if heading is 0
-            //Debug.Log("Angle from headnig is:"+Mathf.Atan2(cx-rx,cz-rz)* Mathf.Rad2Deg +", localRY:"+robot.transform.rotation.eulerAngles.y);
-            //move towards angle:
+            //rotate towards angle:
             float nextAngle=Mathf.Atan2(cx-rx,cz-rz)* Mathf.Rad2Deg;
             if(nextAngle < 0)nextAngle+=360.0f;
-            //Debug.Log(nextAngle+","+robot.transform.rotation.eulerAngles.y);
-            //potential problem here, when value change from 18 to 270, we should turn to minus instead the other way.
-            if (robot.transform.rotation.eulerAngles.y > nextAngle) robot.transform.Rotate(new Vector3(0,-2.0f,0));
-            else robot.transform.Rotate(new Vector3(0,2.0f,0));
-            
-            
-
+            //Activity: calculate error to rotate to target
+            //answer:
+            /**
+            float error = nextAngle - robot.transform.rotation.eulerAngles.y;
+            if (error > 180) error-=180;
+            else if (error < -180) error +=180;
+            robot.transform.Rotate(new Vector3(0,error/10,0));
+            wcA.brakeTorque=0;
+            wcA.motorTorque=10;
+            wcC.brakeTorque=0;
+            wcC.motorTorque=-10;
+            **/
         }
-       
-       
 
        float incremental=10;
        float maxBrake=Mathf.Pow(10,8);
