@@ -81,7 +81,7 @@ public class RobotScript : MonoBehaviour{
        robot.AddComponent<FixedJoint>().connectedBody=wheelC.GetComponent<Rigidbody>();
  
        //place robot somewhere on the plane create by other process
-       robot.transform.position=new Vector3(500,0.35f,500);
+       robot.transform.position=new Vector3(50,2.5f,50);
        locked=robot.transform.rotation.eulerAngles;
        
        pubT = Terrain.activeTerrain;
@@ -102,17 +102,7 @@ public class RobotScript : MonoBehaviour{
             float nextAngle=Mathf.Atan2(cx-rx,cz-rz)* Mathf.Rad2Deg;
             if(nextAngle < 0)nextAngle+=360.0f;
             //Activity: calculate error to rotate to target
-            //answer:
-            /**
-            float error = nextAngle - robot.transform.rotation.eulerAngles.y;
-            if (error > 180) error-=180;
-            else if (error < -180) error +=180;
-            robot.transform.Rotate(new Vector3(0,error/10,0));
-            wcA.brakeTorque=0;
-            wcA.motorTorque=10;
-            wcC.brakeTorque=0;
-            wcC.motorTorque=-10;
-            **/
+            
         }
 
        float incremental=10;
@@ -193,6 +183,3 @@ public class RobotScript : MonoBehaviour{
         GameObject.Destroy(myLine, duration);
     }
 }
- 
- 
-
